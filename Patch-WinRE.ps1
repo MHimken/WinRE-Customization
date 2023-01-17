@@ -37,7 +37,7 @@ Patch-WinRE.ps1 -PatchFolder .\Patches\ -RecoveryDriveSize 2GB -MountFolder C:\W
 This will delete all backups created by Patch-WinRE.
 Patch-WinRE.ps1 -BackupFolder C:\Temp\ -DeleteBackups
 .EXAMPLE
-.\Patch-WinRE.ps1 -Patchfolder .\Patches\ -RecoveryDriveSize 1GB -Driver C:\Temp\Drivers\x64\
+.\Patch-WinRE.ps1 -Patchfolder C:\Temp\Patches\ -RecoveryDriveSize 1GB -Driver C:\Temp\Drivers\x64\
 .NOTES
 Version: 1.4
 Intial creation date: 11.01.2023
@@ -333,7 +333,7 @@ function Add-PatchToWinRE {
     $CurrentWinREBuild = (Get-WindowsImage -ImagePath $CurrentWinREPath -Index 1).SPBuild
     Write-Log "Current Patchversion of mounted WinRE: $CurrentWinREBuild"
     if ($MSUFiles) {
-        $Patches = Get-ChildItem $FullPatchFolder
+        $Patches = Get-ChildItem $PatchFolder
         $SSU = $Patches | Where-Object { $_.Name -like "1_*" }
     }
     elseif ($SingleFile) {
@@ -442,13 +442,13 @@ if ($Driver) {
 }
 if ($PatchFolder) {
     if ((Get-ItemProperty $PatchFolder).Attributes -eq "Directory") {
-        if (-not(Add-PatchToWinRE -MSUFiles $Patches)) {
+        if (-not(Add-PatchToWinRE -MSUFiles $PatchFolder)) {
             Write-Log "Something went wrong while applying patches, please consult the logs" -Component "WinREPatchCore" -Type 3
             Exit 1
         }
     }
-    elseif ($Patches -like "*.msu") {
-        if (-not(Add-PatchToWinRE -SingleFile $Patches)) {
+    elseif ($PatchFolder -like "*.msu") {
+        if (-not(Add-PatchToWinRE -SingleFile $PatchFolder)) {
             Write-Log "Something went wrong while applying patches, please consult the logs" -Component "WinREPatchCore" -Type 3
             Exit 1
         }
