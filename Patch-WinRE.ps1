@@ -50,8 +50,8 @@
 param(
     [System.IO.DirectoryInfo]$WorkingDirectory = 'C:\WinRE-Customization\',
     [System.IO.DirectoryInfo]$BackupDirectory = 'C:\WinRE-Customization\WinREBackups\',
-    [System.IO.DirectoryInfo]$MountDirectory = 'C:\RMM\WinRE\WinREMount\',
-    [System.IO.DirectoryInfo]$LogDirectory = 'C:\RMM\WinRE\Logs\',
+    [System.IO.DirectoryInfo]$MountDirectory = 'C:\WinRE-Customization\WinREMount\',
+    [System.IO.DirectoryInfo]$LogDirectory = 'C:\WinRE-Customization\Logs\',
     # Can't use [System.IO.DirectoryInfo] here, as it will not accept a single file.
     $PatchDirectory,
     $RecoveryDriveSize,
