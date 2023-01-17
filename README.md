@@ -9,3 +9,5 @@ This can only be done in an automated fashion, if the disk:
 * if the sysdrive has enough space and no blocking files to shrink it to the required size - this is verified.
 
 A description of each parameter comes with the script. 
+
+Thanks to everyone that helped build this, especially https://homotechsual.dev/
