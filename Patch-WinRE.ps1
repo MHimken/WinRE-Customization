@@ -62,13 +62,15 @@ $Script:TimeStampStart = Get-Date
 $Script:PathToScript = if ( $PSScriptRoot ) { 
     # Console or VS Code debug/run button/F5 temp console
     $PSScriptRoot 
-} else {
+}
+else {
     if ( $psISE ) { Split-Path -Path $psISE.CurrentFile.FullPath }
     else {
         if ($profile -match 'VScode') { 
             # VS Code "Run Code Selection" button/F8 in integrated console
             Split-Path $psEditor.GetEditorContext().CurrentFile.Path 
-        } else { 
+        }
+        else { 
             Write-Output 'unknown directory to set path variable. exiting script.'
             exit
         } 
@@ -133,7 +135,8 @@ function Disable-WinRE {
     if ($DisableRE[0] -like '*Success*') {
         Write-Log -Message 'Disabled WinRE' -Component 'DisableWinRE'
         return $true
-    } else {
+    }
+    else {
         Write-Log -Message 'Disabling failed' -Component 'DisableWinRE' -Type 3
         return $false
     }
@@ -143,7 +146,8 @@ function Enable-WinRE {
     if ($EnableRE[0] -like '*Success*') {
         Write-Log -Message 'Enabled WinRE' -Component 'EnableWinRE'
         return $true
-    } else {
+    }
+    else {
         Write-Log -Message 'Enabling failed' -Component 'EnableWinRE' -Type 3
         return $false
     }
@@ -161,24 +165,29 @@ function Backup-WinRE {
     $BackupFileName = ('WinRE{0}.wim' -f $Script:DateTime)
     if (-not(Test-Path $BackupDirectory)) {
         New-Item $BackupDirectory -ItemType Directory -Force
-    } else {
+    }
+    else {
         Write-Log -Message 'Backup folder already exists' -Component 'BackupWinRE'
         Write-Log -Message 'Checking if the current WinRE is already backed' -Component 'BackupWinRE'
         $Backups = Get-ChildItem (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.wim -Force
         $ToBackupHash = Get-FileHash $WinREDefaultLocation -Algorithm MD5
-        foreach ($Backup in $Backups) {
-            $BackedFile = Get-FileHash $Backup.FullName -Algorithm MD5
-            if ($BackedFile.Hash -eq $ToBackupHash.Hash) {
-                Write-Log -Message 'Full backup found' -Component 'BackupWinRE'
-                return $true
+        if ($Backups.count -ge 1) {
+            foreach ($Backup in $Backups) {
+                $BackedFile = Get-FileHash $Backup.FullName -Algorithm MD5
+                if ($BackedFile.Hash -eq $ToBackupHash.Hash) {
+                    Write-Log -Message 'Full backup found' -Component 'BackupWinRE'
+                    return $true
+                }
             }
         }
         Write-Log -Message 'No Backup of the current available WinRE found - creating backup...' -Component 'BackupWinRE'
     }
+    Write-Log -Message 'Moving $WinREDefaultLocation to $Backupfolder' -Component 'BackupWinRE'
     Copy-Item -Path $WinREDefaultLocation -Destination $BackupDirectory -PassThru | Rename-Item -NewName $BackupFileName
     if (Test-Path (Join-Path -Path $BackupDirectory -ChildPath $BackupFileName)) {
         return $true
-    } else {
+    }
+    else {
         return $false
     }
 }
@@ -208,18 +217,22 @@ function Resize-RecoveryPartition {
     if ($RecoveryPartition.Size -ge $RecoveryDriveNewSize) {
         Write-Log -Message 'The recovery partition is already of adequate size' -Component 'ResizeRecoveryPartition'
         return $true
-    } else {
+    }
+    else {
         $WinREStatus = Get-WinREStatus
         if ($WinREStatus) {
             if (Disable-WinRE) {
                 Write-Log -Message 'ReagentC successfully disabled for resizing' -Component 'ResizeRecoveryPartition'
-            } else {
+            }
+            else {
                 Write-Log -Message 'ReagentC could not be disabled - please make sure you are running this script as admin' -Component 'ResizeRecoveryPartition' -Type 3
                 return $false
             }
-        } elseif (-not($WinREStatus)) {
+        }
+        elseif (-not($WinREStatus)) {
             Write-Log -Message 'WinRE is already disabled' -Component 'ResizeRecoveryPartition'
-        } else {
+        }
+        else {
             Write-Log -Message 'WinRE status could not be determined - are you running as admin?' -Component 'ResizeRecoveryPartition' -Type 3
             return $false
         }        
@@ -262,17 +275,20 @@ gpt attributes=0x8000000000000001
                         if (-not(Enable-WinRE)) {
                             Write-Log -Message 'WinRE could not be enabled please consult the logs. Its likely you need to recreate the partition manually' -Component 'ResizeRecoveryPartition' -Type 3
                             return $false
-                        } else {
+                        }
+                        else {
                             Write-Log -Message 'Successfully re-enabled ReAgentC' -Component 'ResizeRecoveryPartition'
                             return $true
                         }
-                    } else {
+                    }
+                    else {
                         $LogMessage = "The system drive could not be shrunk to the requested size of $($RecoveryDriveNewSize/1024/1024/1024) GB - Please consult the application event log"
                         Write-Log -Message "$LogMessage `n  $((Get-EventLog -LogName Application -Newest 1 -Source Microsoft-Windows-Defrag -EntryType Information).Message)" -Component 'ResizeRecoveryPartition' -Type 3
                         Write-Log -Message 'The re-sizing could not be performed' -Component 'ResizeRecoveryPartition' -Type 2
                         return $false
                     }
-                } else {
+                }
+                else {
                     Write-Log -Message 'The WinRE.wim seems to be missing. Please make sure C:\Windows\System32\Recovery\Winre.wim exists and is accessible. You can get this file from a matching Windows install.wim' -Component 'ResizeRecoveryPartition' -Type 3
                     Write-Log -Message 'No changes performed to partition, re-enable WinRE' -Component 'ResizeRecoveryPartition'                    
                     if (-not(Enable-WinRE)) {
@@ -281,7 +297,8 @@ gpt attributes=0x8000000000000001
                     return $false
                 }
             }
-        } else {
+        }
+        else {
             Write-Log -Message "Free space left is $($WindowsPartitionCurrentSize.SizeRemaining), please make some room first" -Component 'ResizeRecoveryPartition' -Type 3
             return $false
         }
@@ -296,13 +313,14 @@ function Add-DriverToWinRE {
     $AddDriverLogFile = Join-Path -Path $LogDir -ChildPath ('Add-WindowsDriver_{0}.log' -f $DateTime)
     # Setup hashtable for common parameters for Add-WindowsDriver
     $AddDriverCommonParams = @{
-        Path = $MountDirectory
-        LogPath = $AddDriverLogFile
+        Path     = $MountDirectory
+        LogPath  = $AddDriverLogFile
         LogLevel = 'WarningsInfo'
     }
     if ($Drivers) {
         Add-WindowsDriver -Driver $Drivers -Recurse @AddDriverCommonParams
-    } elseif ($SingleDriver) {
+    }
+    elseif ($SingleDriver) {
         Add-WindowsDriver -Driver $SingleDriver @AddDriverCommonParams
     }
 }
@@ -319,10 +337,14 @@ function Add-PatchToWinRE {
             return $false
         }
     }
+    $CurrentWinREPath = (ReAgentc.exe /info | Select-String -SimpleMatch "\\?\GLOBALROOT\device").ToString().replace("Windows RE location:", "").Trim() + "\WinRE.wim"
+    $CurrentWinREBuild = (Get-WindowsImage -ImagePath $CurrentWinREPath -Index 1).SPBuild
+    Write-Log "Current Patchversion of mounted WinRE: $CurrentWinREBuild"
     if ($MSUFiles) {
         $Patches = $MSUFiles
         $SSU = $Patches | Where-Object { $_.Name -like '1_*' }
-    } elseif ($SingleFile) {
+    }
+    elseif ($SingleFile) {
         $Patches = $SingleFile
     }
     $Windows10 = ([System.Environment]::OSVersion.Version.Build -ge 19042 -and [System.Environment]::OSVersion.Version.Build -lt 22000) 
@@ -331,7 +353,8 @@ function Add-PatchToWinRE {
     }
     if (-not(Test-Path $MountDirectory)) {
         New-Item $MountDirectory -ItemType Directory
-    } else {
+    }
+    else {
         Write-Log -Message 'Directory already exists - verifying its empty' -Component 'PatchWinRE'
         $MountDirectoryEmpty = Get-ChildItem $MountDirectory 
         if ($MountDirectoryEmpty) {
@@ -343,7 +366,8 @@ function Add-PatchToWinRE {
     $Mount = ReAgentC.exe /mountre /path $MountDirectory
     if ($Mount[0] -like '*Successful*' -and $(Get-WindowsImage -Mounted).count -ge 1) {
         Write-Log -Message'WinRE mounted successful' -Component 'PatchWinRE'
-    } else {
+    }
+    else {
         Write-Log -Message "ReAgentC gave the following as the last exitcode: $LASTEXITCODE" -Component 'PatchWinRE' -Type 3
         Write-Log -Message "WinRE couldn't be mounted - please verify the logs" -Component 'PatchWinRE' -Type 3
         return $false
@@ -351,8 +375,8 @@ function Add-PatchToWinRE {
     $DismountImageLogFile = Join-Path -Path $LogDirectory -ChildPath ('Dismount-WindowsImage_{0}.log' -f $DateTime)
     # Setup hashtable for common parameters for *-WindowsImage
     $AddPatchCommonParams = @{
-        Path = $MountDirectory
-        LogPath = $DismountImageLogFile
+        Path     = $MountDirectory
+        LogPath  = $DismountImageLogFile
         LogLevel = 'WarningsInfo'
     }
     if ($SSU) {
@@ -369,16 +393,27 @@ function Add-PatchToWinRE {
     $UnmountCommit = ReAgentC.exe /unmountre /path $($MountDirectory) /commit
     if (-not($UnmountCommit -like '*Success*') -and $(Get-WindowsImage -Mounted).count -ge 1) {
         Write-Log -Message 'Commiting failed - discarding changes' -Component 'PatchWinRE' -Type 3
+        Write-Log -Message 'Status of the WinRE during this operation according to Get-WindowsImage was: $((Get-WindowsImage -Mounted).MountStatus)' -Component 'PatchWinRE'
         $UnmountDiscard = ReAgentC.exe /unmountre /path $($MountDirectory) /discard
-        if (-not($UnmountDiscard)) {
-            Write-Log -Message 'Unmounting first attempt failed - trying alternative method' -Component 'PatchWinRE'
-            Dismount-WindowsImage -Discard @AddPatchCommonParams
-        } else {
+        if (-not($UnmountDiscard[0] -like "*Successful*")) {
+            Write-Log 'Attempting to unmount and discard failed - trying alternative method' -Component 'PatchWinRE' -Type 2
+            Dismount-WindowsImage @AddPatchCommonParams
+            if ($(Get-WindowsImage -Mounted).count -ge 1) {
+                Write-Log -Message 'Unmounting finally failed, please consult the logs' -Component 'PatchWinRE' -Type 3
+                return $false
+            }
+            else {
+                Write-Log 'Alternative unmounting successful, please consult the logs for more information' -Component 'PatchWinRE' -Type 3
+                return $false
+            }
+        }
+        else {
             Write-Log -Message 'Unmounting done, please consult the logs' -Component 'PatchWinRE'
             return $false
         }
 
-    } else {
+    }
+    else {
         $NewWinREPath = (ReAgentc.exe /info | Select-String -SimpleMatch '\\?\GLOBALROOT\device').ToString().Replace('Windows RE location:', '').Trim() + '\WinRE.wim'
         $NewWinREBuild = (Get-WindowsImage -ImagePath $NewWinREPath -Index 1).SPBuild
         Write-Log -Message "Current Patchversion of mounted WinRE: $NewWinREBuild"
@@ -396,7 +431,8 @@ if ($RecoveryDriveSize) {
         Write-Log -Message "Something went wrong with the recovery partition - please check the log $LogFile" -Component 'WinREPatchCore' -Type 3
         Exit 1
     }
-} else {
+}
+else {
     Write-Log -Message 'No recovery drive size specified' -Component 'WinREPatchCore' -Type 2
 }
 
@@ -407,16 +443,19 @@ if ($DriverDirectory) {
                 Write-Log -Message 'Something went wrong while applying drivers, please consult the logs' -Component 'WinREPatchCore' -Type 3
                 Exit 1
             }
-        } elseif ($DriverDirectory -like '*.inf') {
+        }
+        elseif ($DriverDirectory -like '*.inf') {
             if (-not(Add-DriverToWinRE -SingleDriver $DriverDirectory)) {
                 Write-Log -Message 'Something went wrong while applying the driver, please consult the logs' -Component 'WinREPatchCore' -Type 3
                 Exit 1
             }        
-        } else {
+        }
+        else {
             Write-Log -Message 'No directory or path does not end in *.inf' -Component 'WinREPatchCore' -Type 3
             Exit 1
         }
-    } else {
+    }
+    else {
         Write-Log -Message 'Directory/file does not exist' -Component 'WinREPatchCore' -Type 3
         Exit 1
     }
@@ -428,26 +467,31 @@ if ($PatchDirectory) {
                 Write-Log -Message 'Something went wrong while applying patches, please consult the logs' -Component 'WinREPatchCore' -Type 3
                 Exit 1
             }
-        } elseif ($PatchDirectory -like '*.msu') {
+        }
+        elseif ($PatchDirectory -like '*.msu') {
             if (-not(Add-PatchToWinRE -SingleFile $PatchDirectory)) {
                 Write-Log -Message 'Something went wrong while applying patches, please consult the logs' -Component 'WinREPatchCore' -Type 3
                 Exit 1
             }
-        } else {
+        }
+        else {
             Write-Log -Message 'Directory/file not found or no files ending in *.msu in directory.' -Component 'WinREPatchCore' -Type 3
             Exit 1
         }
-    } else {
+    }
+    else {
         Write-Log -Message 'Patch directory/file does not exist at provided path' -Component 'WinREPatchCore' -Type 2
     }
-} else {
+}
+else {
     Write-Log -Message 'No patch directory/file specified' -Component 'WinREPatchCore' -Type 2
 }
 if ($DeleteBackups) {
     if ($BackupDirectory) {
         Write-Log -Message "Deleting all backups of WinRE wims in $BackupDirectory"
         Get-ChildItem $($BackupDirectory + '*') -Include *.wim -Force | ForEach-Object { if ($_) { Remove-Item -Path $_.FullName -Force -WhatIf } }
-    } else {
+    }
+    else {
         Write-Log -Message "Can't delete backups if no folder is specified" -Component 'WinREPatchCore' -Type 2
     }
 }
