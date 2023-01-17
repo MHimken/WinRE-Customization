@@ -48,8 +48,7 @@
     Intial creation date: 11.01.2023
     Last change date: 17.01.2023
 .LINK
-    https://manima.de/
-    https://manima.de/ARTICLEHERE
+    https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
 #>
 
 param(
