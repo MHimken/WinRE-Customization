@@ -31,13 +31,17 @@
 .OUTPUTS
     None, this script doesn't output anything.
 .EXAMPLE
+    This will create a backup of WinRE, then exit.
+    Patch-WinRE.ps1
+.EXAMPLE
     This example will use the current script folders subfolder called "Patches" as resource for MSUs. It will resize the recovery partition to 2GB if necessary.
     Backups are written to C:\WinREBackup\. Temporarily C:\WinREMounted\ will be used as mounting directory.
     Patch-WinRE.ps1 -PatchDirectory .\Patches\ -RecoveryDriveSizeInGB 2GB -MountDirectory C:\WinREMounted\ -BackupDirectory C:\WinREBackup\
 .EXAMPLE
-    This will delete all backups created by Patch-WinRE.
+    This will delete all backups created by Patch-WinRE in a custom folder.
     Patch-WinRE.ps1 -BackupDirectory C:\Temp\ -DeleteBackups
 .EXAMPLE
+    Will perform all three main functions of this script. Create a backup of the WinRE, resize the partition to 1GB, apply patches and add drivers from a folder
     .\Patch-WinRE.ps1 -Patchfolder .\Patches\ -RecoveryDriveSizeInGB 1GB -DriverDirectory C:\Temp\Drivers\x64\
 .NOTES
     Version: 1.5
