@@ -200,6 +200,7 @@ function Dismount-WinRE {
         Write-Log -Message 'WinRE commited changes successfully' -Component 'DismountWinRE'
         return $true
     }
+}
 
     function Backup-WinRE {
         Write-Log -Message 'Creating WinRE Backup - will not be automatically deleted(!)' -Component 'BackupWinRE'
@@ -494,7 +495,7 @@ gpt attributes=0x8000000000000001
     if ($PatchDirectory) {
         if (Test-Path -Path $PatchDirectory) {
             if ((Get-ItemProperty $PatchDirectory).Attributes -eq 'Directory') {
-                if (-not(Add-PatchToWinRE -MSUFiles (Get-ChildItem $PatchDirectory -Filter *.msu))) {
+                if (-not(Add-PatchToWinRE -MSUFiles (Get-ChildItem $PatchDirectory -Filter *.msu -Force))) {
                     Write-Log -Message 'Something went wrong while applying patches, please consult the logs' -Component 'WinREPatchCore' -Type 3
                     Exit 1
                 }
