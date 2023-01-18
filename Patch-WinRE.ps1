@@ -175,7 +175,7 @@ function Dismount-WinRE {
         LogLevel = 'WarningsInfo'
     }
     $UnmountCommit = ReAgentC.exe /unmountre /path $($MountDirectory) /commit
-    if (-not($UnmountCommit[0] -like '*Success*') -and $(Get-WindowsImage -Mounted).count -ge 1) {
+    if (-not($UnmountCommit) -or (-not($UnmountCommit[0] -like '*Success*') -and $(Get-WindowsImage -Mounted).count -ge 1)) {
         Write-Log -Message 'Commiting failed - discarding changes' -Component 'DismountWinRE' -Type 3
         Write-Log -Message "Status of the WinRE during this operation according to Get-WindowsImage was: $((Get-WindowsImage -Mounted).MountStatus)" -Component 'DismountWinRE'
         $UnmountDiscard = ReAgentC.exe /unmountre /path $($MountDirectory) /discard
