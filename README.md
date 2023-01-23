@@ -10,6 +10,7 @@ Please be aware of this special update that was released **For Windows 11** http
 
 The file coming is named "windows10.0-kb5022370-x64_216ed6897b0f0194f9d48d2142b9f806b69e07f8.cab", but should be named windows1**1**.0
 
+# Prerequisites
 **Attention**
 This can only be done in an automated fashion, if the disk:
 * is formatted as recommended for UEFI (with the recovery partition being at the very end of the disk) and
@@ -17,9 +18,8 @@ This can only be done in an automated fashion, if the disk:
 
 A description of each parameter comes with the script. 
 
-Thanks to everyone that helped build this, especially https://homotechsual.dev/
+# Latest changes
 
-Latest changes
 - MUI support added (Major change)
     * Removed all text based verifications and replaced them 
 - Now accepts GDRDU, LCU, SOS and DU as patch inputs (Major change)
@@ -27,3 +27,5 @@ Latest changes
     * Renamed several parameters to reflect function merges
 - Verbose removed for now, needs to be switch to cmdletbind
 - Added "AbortIfFailed"
+
+Thanks to everyone that helped build this, especially https://homotechsual.dev/
