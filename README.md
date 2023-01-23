@@ -11,3 +11,12 @@ This can only be done in an automated fashion, if the disk:
 A description of each parameter comes with the script. 
 
 Thanks to everyone that helped build this, especially https://homotechsual.dev/
+
+Latest changes
+- MUI support added (Major change)
+    * Removed all text based verifications and replaced them 
+- Now accepts GDRDU, LCU, SOS and DU as patch inputs (Major change)
+    * Merged several functions that did almost the same - added detection methods accordingly
+    * Renamed several parameters to reflect function merges
+- Verbose removed for now, needs to be switch to cmdletbind
+- Added "AbortIfFailed"
