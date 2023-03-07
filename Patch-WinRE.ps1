@@ -568,7 +568,7 @@ function Add-PatchesToWinRE {
         $SSU = $Files | Where-Object { $_.Name -like 'ssu*' }
     }
     if ($SingleFile) {
-        $Files = $SingleFile
+        $Files = Get-Item $SingleFile
     }
     Write-Log -Message 'Preparing WinRE' -Component 'AddPatchesToWinRE'
     if (-not(Mount-WinRE)) {
