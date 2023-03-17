@@ -23,6 +23,7 @@ Microsoft release their own script officially on https://support.microsoft.com/e
 
 In it the following information is given:
 >If the BitLocker TPM protector is present, reconfigures WinRE for BitLocker service.
+
 >**Important** This step is not present in most third-party scripts for applying updates to the WinRE image.
 
 Which most likely refers to this snippet from their code
@@ -45,21 +46,21 @@ Which most likely refers to this snippet from their code
                 }
 ```
 This script does that, although it may not be obvious. The order for this script is (because it made the most sense to me)
-1. Backup WinRE - the script does this, even if you specify to delete said backup later
-    * This **disables** the Recovery Agent so the .wim file can be backed up somewhere else.
+1. Backup WinRE - the script does this even if you specify to delete the backup later.
+    * This **disables** the Recovery Agent so that the .wim file can be backed up elsewhere.
     * This also verifies that the Recovery Agent can be safely disabled and that the .wim is accessible.
 2. Mount the WinRE using the new method that was provided here https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-update-to-winre?view=windows-11#apply-the-update-to-a-running-pc
 3. Apply whatever you provided to the script (as of writing drivers or patches)
-4. Dismount the image trying to commit the changes
-5. Enable the recovery agent
+4. Dismount the image and try to commit the changes
+5. Enable the Recovery Agent
 
-All in all the script does the exact same steps. Although by accident, because apparently this re-signs the partition 
-or the .wim to allow secure boot/BitLocker to trust the recovery partition still. If you think about it that makes 
-sense, because otherwise an attacker could just replace the .wim in the unprotected partition. 
+All in all, the script does exactly the same thing. Although by accident, because apparently this re-signs the partition 
+or the .wim so that Secure Boot/BitLocker can still trust the recovery partition. If you think about it, this makes sense, because 
+otherwise an attacker could just replace the .wim in the unprotected partition.
 
-So far I didn't get issue reports about secure boot or BitLocker itself acting up (unless the script never fully ran!). 
-If you used this script to apply your patches, you should be good. Here's the obvious remindder though, that I'm not an MS
-employee and cannot vouche for the accuracy of the provided information of what I just described. You're still using this
+So far, I haven't received any reports of Secure Boot or BitLocker itself acting up (unless the script never fully ran!). 
+If you used this script to apply your patches, you should be fine. The obvious caveat here is that I'm not an MS
+employee and cannot vouch for the accuracy of the information provided by what I have just described. You still use this
 script at your own risk!
 
 # Latest changes
