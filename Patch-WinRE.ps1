@@ -514,14 +514,19 @@ function Add-DriverToWinRE {
         $SingleDriver
     )
     Write-Log -Message 'Adding driver(s) to WinRE image' -Component 'AddDriversToWinRE'
-    Write-Log -Message 'Mounting Winre' -Component 'AddDriversToWinRE'
     $AddDriverLogFile = Join-Path -Path $LogDirectory -ChildPath ('Add-WindowsDriver_{0}.log' -f $DateTime)
     $AddDriverCommonParams = @{
         Path     = $MountDirectory
         LogPath  = $AddDriverLogFile
         LogLevel = 'WarningsInfo'
     }
-
+    if (-not(Get-WinREStatus)) {
+        Write-Log -Message 'WinRE is not enabled currently - trying to enable WinRE' -Component 'AddDriversToWinRE' -Type 2
+        if (-not(Enable-WinRE)) {
+            Write-Log -Message "WinRE couldn't be enabled" -Component 'AddDriversToWinRE' -Type 3
+            return $false
+        }
+    }
     Write-Log -Message 'Mounting WinRE to add drivers' -Component 'PatchWinRE'
     if (-not(Mount-WinRE)) {
         Write-Log -Message 'WinRE could not be mounted to apply drivers ' -Component 'PatchWinRE' -Type 3
