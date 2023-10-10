@@ -153,7 +153,7 @@ function Get-Stats {
     $Script:ReAgentCCurrent = $Script:ReAgentCCurrentInfo.split("`n")[4].Substring(31, $Script:ReAgentCCurrentInfo.split("`n")[4].length - 31).trim()
     $Script:BackupWinRESize = 0
     if (Test-Path $BackupDirectory) {
-        Get-ChildItem -Path (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.wim | ForEach-Object { $Script:BackupWinRESize += [math]::round($_.Length / 1GB, 2) }
+        Get-ChildItem -Path (Join-Path -Path $BackupDirectory -ChildPath '*') -Filter *.wim -Force | Sort-Object LastWriteTime | Select-Object -Last 1 | ForEach-Object { $Script:BackupWinRESize = [math]::round($_.Length / 1GB, 2) }
     }
     if ($Script:ReAgentCCurrent) {
         $Script:CurrentRecoveryPartitionSize = [math]::round((Get-Partition -DiskNumber $($Script:ReAgentCCurrent.split('k'))[1].Substring(0, 1) -PartitionNumber $($Script:ReAgentCCurrent.split('n'))[1].Substring(0, 1)).size / 1GB, 2)
@@ -220,6 +220,15 @@ function Mount-WinRE {
         Write-Log -Message 'There is at least one other image mounted already' -Component 'MountWinRE' -Type 2
         return $false
     }
+    if(-not(Get-WinREStatus)){
+        if(-not(Enable-WinRE)){
+            Write-Log -Message 'WinRE could not be enabled - due to a recent change it needs to be enabled to mount the image' -Component 'MountWinRE' -Type 3
+            return $false
+        }
+        else{
+            Write-Log -Message 'Recovery Agent enabled to mount the image' -Component 'MountWinRE'
+        }
+    }
     $Mount = ReAgentC.exe /mountre /path $MountDirectory
     if ($Mount) {
         if ($Mount[0] -notmatch ".*\d+.*" -and (Get-WindowsImage -Mounted).count -ge 1 -and $LASTEXITCODE -eq 0) {
@@ -229,6 +238,9 @@ function Mount-WinRE {
     } else {
         Write-Log -Message 'Could not mount WinRE image - please consult the log' -Component 'MountWinRE' -Type 3
         Write-Log -Message "$Mount" -Component 'MountWinRE'
+        Write-Log -Message "Trying to copy the reagentc.log to the log folder" -Component 'MountWinRE'
+        $ReagentCLog = Join-Path -Path $LogDirectory -ChildPath ("ReAgentC_$DateTime.log")
+        Copy-Item -Path "$env:SystemDrive\Windows\Logs\ReAgent\ReAgent.log" -Destination $ReagentCLog
         return $false
     }
 }
@@ -247,7 +259,7 @@ function Dismount-WinRE {
     Write-Log -Message 'Cleanup done, verifying image status' -Component 'DismountWinRE'
     $REMountedStatus = $((Get-WindowsImage -Mounted).MountStatus -eq "Ok")
     if ($REMountedStatus -and -not($Discard)) {
-        Write-Log -Message "Mounted WinRE status is $REMountedStatus"
+        Write-Log -Message "Mounted WinRE status is $REMountedStatus" -Component 'DismountWinRE'
         $UnmountCommit = ReAgentC.exe /unmountre /path $($MountDirectory) /commit
     } else {
         $UnmountCommit = $false
@@ -275,8 +287,13 @@ function Dismount-WinRE {
             return $false
         }   
     } elseif ($UnmountCommit[0] -notmatch ".*\d+.*") {
-        Write-Log -Message 'WinRE commited changes successfully' -Component 'DismountWinRE'
+        Write-Log -Message 'WinRE commited changes successfully - cleaning up temporary folder' -Component 'DismountWinRE'
         Remove-Item $MountDirectory -Force -Recurse
+        Write-Log -Message 'Disabling WinRE, otherwise BitLocker will complain. Will re-enable at the end' -Component 'DismountWinRE' -Type 2
+        if(-not(Disable-WinRE)){
+            Write-Log -Message 'Disabling WinRE failed - this means BitLocker will require the recovery key next reboot' -Component 'DismountWinRE' -Type 3
+            Write-Log -Message 'After next reboot try reagentc /disable and reagentc /enable and troubleshoot if required' -Component 'DismountWinRE' -Type 2
+        }
         return $true
     }
 }
@@ -307,7 +324,8 @@ function Add-WinREPackage {
     Write-Log -Message "Analysing Package $PackagePath" -Component 'AddWinREPackage'
     if ($SSU) {
         $PackagePathBuildNumber = $PackagePath.Fullname.split("-")[1]
-        $ApplySSU = (Get-WindowsPackage -Path $MountDirectory | Where-Object { $_.PackageName -like "*ServicingStack*" -and $_.PackageName -like "*$PackagePathBuildNumber*" }).packagestate -eq "Installed"
+        $AddWindowsPackageLogFile = Join-Path -Path $LogDirectory -ChildPath ('Analyseusing-Get-WindowsPackage_{0}.log' -f $DateTime)
+        $ApplySSU = (Get-WindowsPackage -Path $MountDirectory -LogPath $AddWindowsPackageLogFile -LogLevel 'WarningsInfo' | Where-Object { $_.PackageName -like "*ServicingStack*" -and $_.PackageName -like "*$PackagePathBuildNumber*" }).packagestate -eq "Installed"
         if (-not($ApplySSU)) {
             Write-Log -Message 'SSU not found, applying...' -Component 'AddWinREPackage'
             Add-WindowsPackage @AddPatchCommonParams | Out-Null
@@ -441,9 +459,14 @@ function Confirm-WinREPrerequisites {
     }
     
     if ($CheckWinRE) {
-        $WinRELocation = Join-Path -Path $ENV:SystemDrive -ChildPath '\Windows\System32\Recovery\WinRE.wim'
-        if (-not(Test-Path $WinRELocation)) {
-            $WinREFileMissing = $true
+        if(-not(Get-WinREStatus)){
+            $WinRELocation = Join-Path -Path $ENV:SystemDrive -ChildPath '\Windows\System32\Recovery\WinRE.wim'
+            if (-not(Test-Path $WinRELocation)) {
+                $WinREFileMissing = $true
+            }
+        }
+        else{
+            $WinREFileMissing = $false
         }
     }
     if ($InitialRun) {
@@ -460,6 +483,7 @@ function Confirm-WinREPrerequisites {
                 return $true
             }
         }
+        return $true
     }
     if ($CheckRecoveryPartitionPreStage) {
         #Required during the creation phase of the recovery partition - the partition isn't yet marked as 'Recovery' which is why we need to check like this
@@ -843,7 +867,7 @@ if ($DeleteBackups) {
         Write-Log -Message "Can't delete backups if no folder is specified" -Component 'WinREPatchCore' -Type 2
     }
 }
-if (Get-WinREStatus -eq $false) {
+if (-not(Get-WinREStatus)) {
     Write-Log -Message 'Found that WinRE was still disabled - trying to enable it' -Component 'WinREPatchCore'
     if (-not(Enable-WinRE)) {
         Write-Log -Message 'Something went wrong while enabling WinRE, please consult the logs' -Component 'WinREPatchCore' -Type 3
@@ -852,7 +876,7 @@ if (Get-WinREStatus -eq $false) {
 if (-not($CreateWinREDrive)) {
     Write-Log -Message 'Customization finished, creating statistics' -Component 'WinREPatchCore'
     Get-Stats
-    Write-Log -Message "Original WinRE size before patching: $Script:BackupWinRESize
+    Write-Log -Message "WinRE size before patching: $Script:BackupWinRESize
     RecoveryPartitionSize: $Script:CurrentRecoveryPartitionSize GB
     RecoveryPartitionFree: $Script:CurrentRecoveryPartitionFree GB
     EstimatedWinRESize: $Script:EstimatedWinRESize GB

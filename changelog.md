@@ -1,4 +1,15 @@
-# July 2023
+# Changes
+
+## October 2023
+
+- Change: WinRE needs to be ENABLED as of recent(?) to be able to mount the WinRE. This has been implemented now
+- Fix: Added multiple new log messages
+- Fix: A log message was missing a component
+- Note: I took good care to make sure that the recovery agent is disabled and enabled as required via MS docs to make certain (see <https://github.com/MHimken/WinRE-Customization#adressing-the-recent-script-offered-by-microsoft>)
+    that its recognized as valid by BitLocker. The Safe-OS update from October windows11.0-kb5031476-x64_d93ef6c86b4010a7f00c8a56037af0cc16190f48.cab
+    can now be applied successfully to Windows 11 22H2.
+
+## July 2023
 
 - Change: Renamed Resize-RecoveryPartition to Format-WinRERecoveryPartition
 - Change: Get-WinREStatus will now return $true, $false or $null instead of just $true or $false
