@@ -8,6 +8,7 @@
 - Note: I took good care to make sure that the recovery agent is disabled and enabled as required via MS docs to make certain (see <https://github.com/MHimken/WinRE-Customization#adressing-the-recent-script-offered-by-microsoft>)
     that its recognized as valid by BitLocker. The Safe-OS update from October windows11.0-kb5031476-x64_d93ef6c86b4010a7f00c8a56037af0cc16190f48.cab
     can now be applied successfully to Windows 11 22H2.
+- Fix: Fixed missing Exit 1 for failing to enable WinRE
 
 ## July 2023
 

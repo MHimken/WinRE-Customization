@@ -871,6 +871,7 @@ if (-not(Get-WinREStatus)) {
     Write-Log -Message 'Found that WinRE was still disabled - trying to enable it' -Component 'WinREPatchCore'
     if (-not(Enable-WinRE)) {
         Write-Log -Message 'Something went wrong while enabling WinRE, please consult the logs' -Component 'WinREPatchCore' -Type 3
+        Exit 1
     }
 }
 if (-not($CreateWinREDrive)) {
