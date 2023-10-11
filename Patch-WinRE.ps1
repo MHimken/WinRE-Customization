@@ -870,7 +870,10 @@ if ($DeleteBackups) {
 if (-not(Get-WinREStatus)) {
     Write-Log -Message 'Found that WinRE was still disabled - trying to enable it' -Component 'WinREPatchCore'
     if (-not(Enable-WinRE)) {
-        Write-Log -Message 'Something went wrong while enabling WinRE, please consult the logs' -Component 'WinREPatchCore' -Type 3
+        Write-Log -Message 'Something went wrong while enabling WinRE, please consult the ReAgent.log' -Component 'WinREPatchCore' -Type 3
+        Write-Log -Message 'Do not be confused by the errormessage that says "Can not be enabled on a disk with BitLocker enabled".`
+        This means that the recovery partition could not be used. There are multiple reasons for that. `
+        This might happen if the new WinRE partition is too small. As mentioned, make sure to read the ReAgent.log' -Component 'WinREPatchCore'  -Type 2
         Exit 1
     }
 }
