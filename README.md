@@ -3,6 +3,7 @@
 Customizes WinRE - recent updates can be found at the end of this readme. This script applies patches and drivers. Will resize recovery partition if required.
 
 This script was created to automate remediation of CVE-2022-41099, however it can be used to patch WinRE monthly and automated as well. The script will verify the size of your recovery partition and resize it if required.
+Update: This will also help to extend a partition which might be required for CVE-2024-20666 (see KB5034440, KB5034441 or KB5034439)
 
 Please read <https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-update-to-winre> to learn which patches you should apply! GDR-DU and LCU should only be applied to fix major issues, they take about 8-10 minutes. SOS and DUs are extremly small and take seconds to apply (less than a minute).
 
