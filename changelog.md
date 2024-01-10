@@ -1,5 +1,9 @@
 # Changes
 
+## January 2024
+
+- This script can help to extend a recovery partition which might be required for CVE-2024-20666 (see KB5034440, KB5034441 or KB5034439)
+
 ## October 2023
 
 - Change: WinRE needs to be ENABLED as of recent(?) to be able to mount the WinRE. This has been implemented now

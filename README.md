@@ -1,9 +1,8 @@
 # WinRE-Customization
 
-Customizes WinRE - recent updates can be found at the end of this readme. This script applies patches and drivers. Will resize recovery partition if required.
+Customizes WinRE - recent updates can be found in the changelog. This script applies patches and drivers. Will resize recovery partition if required.
 
-This script was created to automate remediation of CVE-2022-41099, however it can be used to patch WinRE monthly and automated as well. The script will verify the size of your recovery partition and resize it if required.
-Update: This will also help to extend a partition which might be required for CVE-2024-20666 (see KB5034440, KB5034441 or KB5034439)
+This script was initially created to automate remediation of CVE-2022-41099, however it can be used to patch WinRE monthly and automated as well. The script will verify the size of your recovery partition and resize it if required.
 
 Please read <https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/add-update-to-winre> to learn which patches you should apply! GDR-DU and LCU should only be applied to fix major issues, they take about 8-10 minutes. SOS and DUs are extremly small and take seconds to apply (less than a minute).
 
@@ -78,7 +77,7 @@ script at your own risk!
 * Added new switch OnlyCreateWinREDrive which allows for the creation of a non-existing WinRE drive. However, right now you still
 need to have the WinRE.wim in place. The default location is %systemroot%\System32\Recovery\ - unhide system files in explorer.
 * Resize-Recoverypartition now checks for GPT. MBR with legacy BIOS is **not supported**
-* This is the last time minor changes will be added here, unless they're major changes. Check <https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md> for more changes.
+* This is the last time minor changes will be added here to the README, unless they're major changes. Check <https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md> for more changes.
 
 17.07.2023:
 
