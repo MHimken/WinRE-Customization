@@ -1,6 +1,21 @@
 # Changes
 
-## January 2024
+## 23th of January 2024 - Version 3.0
+
+New major Version 3.0 aka 'REcovered Mystery'.
+
+- Add: New Switch ReportOnly
+- Add: New Switch ToConsole
+- Add: New function Update-RecoveryPartitionInformation
+- Change: Format-WinREPartition has been adjusted to work with recovery partitions that can't be expanded.
+- Change: Confirm-WinREPrerequisites has been overhauled to reflect new scenarios
+- Change: Adjusted in script documentation to reflect new functions
+- Change: Adjusted Write-Log function to output to console
+- Change: Expanded Get-Stats function for the 'ReportOnly' switch
+- Known-Issue: Recovery drive on OS-disk isn't handled currently. Contact me if you require this.
+- Known-Issue: Multiple partition on the same disk as the OS partition isn't handled currently. Contact me if you require this.
+
+## 13th of January 2024
 
 - This script can help to extend a recovery partition which might be required for CVE-2024-20666 (see KB5034440, KB5034441 or KB5034439)
 

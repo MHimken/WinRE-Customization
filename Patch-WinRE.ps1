@@ -1,58 +1,60 @@
 <#
 .SYNOPSIS
-    Customizes WinRE. This script applies patches and drivers. Will resize recovery partition if required.
+    Customizes WinRE. This script will apply patches and drivers. Will resize recovery partition if needed.
 .DESCRIPTION
-    This script was created to automate remediation of CVE-2022-41099, however it can be used to patch and customize WinRE automated as well. 
-    If specified the script will verify the size of your recovery partition and resize it if required.
+    This script was created to automate the remediation of CVE-2022-41099, but can also be used to automate the patching and customization of WinRE. 
+    If specified, the script will check the size of your recovery partition and resize it if necessary.
     
     !!There is an order that has be followed when adding things to _any_ type of Windows Image see https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/servicing-the-image-with-windows-updates-sxs !!
     
     #####ATTENTION#####
-    This can only be done in an automated fashion, if:
-    a) the disk is formatted as recommended for UEFI (with the recovery partition being at the very end of the disk)
-    b) the sysdrive has enough space and no blocking files to shrink it to the required size - this is verified.
+    This can only be done automatically if the sysdrive has enough space and no blocking files to shrink it to the required size. This is verified.
+    This script will attempt to use the default sequence recommended for OS GPT partitions. Meaning the recovery drive will always be created by shrinking the OS drive.
 .PARAMETER WorkingDirectory
-    Adds a working directory, as we have to create some logs and files. Default C:\WinRE-Customization\
+Adds a working directory as we need to create some logs and files. Default C:\WinRE-Customization\
 .PARAMETER BackupDirectory
-    Specify a folder to backup WinRE to. Careful, WinRE backups are not deleted, even after successful (use -DeleteBackups). Default: C:\WinRE-Customization\WinREBackups\
+    Specify a folder to backup WinRE to. Careful, WinRE backups will not be deleted even if successful (use -DeleteBackups if desired). Default is C:\WinRE-Customization\WinREBackups\
 .PARAMETER MountDirectory
-    Specify the folder to mount your WinRE to. Default: C:\WinRE-Customization\WinREMount\
+    Specify the folder to mount your WinRE to. Default is C:\WinRE-Customization\WinREMount\
 .PARAMETER LogDirectory
-    Specify a folder to output logs to. Default: C:\WinRE-Customization\Logs
+    Specify a folder to output logs to. Default is C:\WinRE-Customization\Logs
 .PARAMETER FoDDirectory
-#ToDo Features and Language Packs go here
+    #ToDo Features and Language Packs go here
 .PARAMETER PatchFilesGDRDUorLCU
-    Use this to apply the latest cumulative update (LCU) or General Distribution Release Dynamic Update (GDRDU).
-    Accepts the path to a folder containing CABs/MSUs or a single CAB/MSU file. Please make sure you provide this script with the matching OS-Version file.
+    Use to apply the latest cumulative update (LCU) or general distribution release dynamic update (GDRDU).
+    Accepts the path to a folder containing CABs/MSUs or a single CAB/MSU file. Please make sure that you provide this script with the appropriate OS version file.
     Attention: SSUs _must_ start with "ssu" to be applied first.
-    Attention: To ensure you have enough space left on your recovery partition after patching with an GDRDU/LCU it will check if the minimum of 1GB 
-    is configured and otherwise extend the partition (aka recreate).
+    Attention: To ensure that you have enough space left on your recovery partition after patching with a GDRDU/LCU, it will check if the minimum of 1GB is configured and otherwise extend the partition (aka recreate).
 .PARAMETER PatchFilesDUorSOS
-    Use this to apply the dynamic update (DU) and SOS (Safe OS) updates.
-    Accepts the path to a folder containing CABs or a single CAB file. Please make sure you provide this script with the matching OS-Version file(s).
+    Use this to apply the Dynamic Update (DU) and Safe OS (SOS) updates.
+    Accepts the path to a folder containing CABs or a single CAB file. Please make sure you provide this script with the appropriate OS version file(s).
 .PARAMETER RecoveryDriveSizeInGB
-    Specify the recovery drive size. The recommendation is 1GB. If not specified, will assume that the size is appropiate.
-    Attention: It is recommended to set this, it will verify beforce changing.
+    Specify the size of the recovery disk. The default is 1GB. If not specified, the size is assumed to be appropriate.
+    Caution: It is recommended to set this, it will be checked before changing it.
 .PARAMETER FilesDriver
-    Specify the path to a folder containing the drivers - needs to have at least one *.inf. You can also specify a single path to an *.inf file.
+    Specify the path to a folder containing the drivers - must have at least one *.inf file. You can also specify a single path to an *.inf file.
 .PARAMETER DeleteBackups
-    Removes all .wim files in -BackupDirectory.
+    Removes all .wim files in the folder specified through -BackupDirectory.
 .PARAMETER CreateWinREDrive
-    This parameter will allow you to create a recovery drive only. It assumes that you don't need a backup of WinRE at this point. However, enablement will
-    fail, if the WinRE.wim is missing from %systemroot%/system32/recovery. 
+    This parameter allows you to create a recovery drive only. It assumes that you don't need a backup of WinRE at this point. However, the activation will fail if WinRE.wim is missing from %systemroot%/system32/recovery.
 .PARAMETER AbortIfFailed
-    When applying content this switch will discard all changes automatically while dismounting the image.
-    This will make the script exit successfully, if the content couldn't be applied(!)
+    If applying content fails, this switch will automatically discard all changes when the image is unmounted.
+    This will cause the script to exit successfully if the content couldn't be applied(!)
+.PARAMETER ReportOnly
+    This switch returns only some general information about the current state of the recovery drive and recovery agent.
+    This parameter causes the script to always run successfully, as it is intended for information gathering purposes.
+.PARAMETER ToConsole
+    This parameter does NOT CREATE A LOG. Instead, it returns to the current output (console or similar).
 .INPUTS
     None, script only accepts parameterised input.
 .OUTPUTS
-    None, this script doesn't output anything.
+    None, this script doesn't output anything unless -ToConsole is used.
 .EXAMPLE
     This will create a backup of WinRE, then exit.
     Patch-WinRE.ps1
 .EXAMPLE
-    This example will use the current script folders subfolder called "Patches" as resource for MSUs. It will resize the recovery partition to 2GB if necessary.
-    Backups are written to C:\WinREBackup\. Temporarily C:\WinREMounted\ will be used as mounting directory.
+    This example will use a subfolder named "LCU" in the current script location as a resource for MSUs. It will resize the recovery partition to 2GB if necessary.
+    Backups will be written to C:\WinREBackup\. Temporarily, C:\WinREMounted\ is used as the mounting directory.
     Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\temp\LCU -RecoveryDriveSizeInGB 2GB -MountDirectory C:\WinREMounted\ -BackupDirectory C:\WinREBackup\
 .EXAMPLE
     This will delete all backups created by Patch-WinRE in a custom folder.
@@ -66,14 +68,19 @@
 .EXAMPLE
     This example will create a recovery partition only - nothing else.
     Patch-WinRE.ps1 -CreateWinREDrive
+.EXAMPLE
+    This example will expand the recovery partition to 1GB and pipe all log messages to the current output instead of the log file. 
+    See the second link in the LINKS section to learn more about what partitioning is covered.
+    Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
 .NOTES
-    Version: 2.3
-    Versionname: Partition Me
+    Version: 3.0
+    Versionname: REcovered Mystery
     Intial creation date: 11.01.2023
-    Last change date: 06.08.2023
+    Last change date: 23.01.2024
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
+    https://manima.de/2024/01/winre-patching-round-2/
 #>
 
 param(
@@ -89,8 +96,9 @@ param(
     $FilesDriver,
     $DeleteBackups = $false, #Make really sure you want to do this, hence not a switch
     [switch]$CreateWinREDrive,
-    [switch]$AbortIfFailed#,
-    #[switch]$Verbose
+    [switch]$AbortIfFailed,
+    [switch]$ReportOnly,
+    [switch]$ToConsole
 )
 $Script:TimeStampStart = Get-Date
 $Script:PathToScript = if ( $PSScriptRoot ) { 
@@ -137,35 +145,74 @@ function Write-Log {
     $Date = Get-Date -Format 'MM-dd-yyyy'
     if (-not($Component)) { $Component = 'Runner' }
     if (-not($Type)) { $Type = 1 }
-    $LogMessage = "<![LOG[$Message" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
-    $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $LogFile
-    if ($Verbose) {
-        switch ($Type) {
-            1 { Write-Host $Message }
-            2 { Write-Warning $Message }
-            3 { Write-Error $Message }
-            default { Write-Host $Message }
-        }        
+    if (-not($ToConsole)) {
+        $LogMessage = "<![LOG[$Message" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
+        $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $LogFile
+    } elseif ($ToConsole) {
+        Write-Output "T:$Type C:$Component M:$Message"
     }
 }
 function Get-Stats {
-    $Script:ReAgentCCurrentInfo = ReAgentc.exe /info
-    $Script:ReAgentCCurrent = $Script:ReAgentCCurrentInfo.split("`n")[4].Substring(31, $Script:ReAgentCCurrentInfo.split("`n")[4].length - 31).trim()
-    $Script:BackupWinRESize = 0
-    if (Test-Path $BackupDirectory) {
-        Get-ChildItem -Path (Join-Path -Path $BackupDirectory -ChildPath '*') -Filter *.wim -Force | Sort-Object LastWriteTime | Select-Object -Last 1 | ForEach-Object { $Script:BackupWinRESize = [math]::round($_.Length / 1GB, 2) }
+    param(
+        [switch]$InitialRun,
+        [switch]$ReportOnly,
+        [switch]$Report
+    )
+    if ($InitialRun) {
+        $TimeStampStop = Get-Date
+        $RuntimeRaw = $TimeStampStop - $Script:TimeStampStart
+        $Script:Runtime = $RuntimeRaw.ToString("hh':'mm':'ss")
+        if ($Script:RecoveryPartition) {
+            $RecoveryVolume = Get-Volume -Partition $Script:RecoveryPartition
+            $Script:CurrentRecoveryPartitionSize = [math]::round($RecoveryVolume.Size / 1GB, 2)
+            $Script:CurrentRecoveryPartitionFree = [math]::round($RecoveryVolume.SizeRemaining / 1GB, 2)
+            $Script:InitialRecoveryPartitionSize = $Script:CurrentRecoveryPartitionSize
+            $Script:InitialRecoveryPartitionSizeFree = $Script:CurrentRecoveryPartitionFree
+        }
     }
-    if ($Script:ReAgentCCurrent) {
-        $Script:CurrentRecoveryPartitionSize = [math]::round((Get-Partition -DiskNumber $($Script:ReAgentCCurrent.split('k'))[1].Substring(0, 1) -PartitionNumber $($Script:ReAgentCCurrent.split('n'))[1].Substring(0, 1)).size / 1GB, 2)
-        $Script:CurrentRecoveryPartitionFree = [math]::round((Get-Volume -Partition $((Get-Partition -DiskNumber $($Script:ReAgentCCurrent.split('k'))[1].Substring(0, 1) -PartitionNumber $($Script:ReAgentCCurrent.split('n'))[1].Substring(0, 1)))).SizeRemaining / 1GB, 2)
-    } else {
-        $Script:CurrentRecoveryPartitionSize = 0
-        $Script:CurrentRecoveryPartitionFree = 0
+    if ($ReportOnly) {
+        if ($Script:RecoveryPartition) {
+            $LastPartitionNumber = $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber)
+        } else {
+            Write-Log -Message 'No recovery partition found - report will be empty' -Component 'StatsGathering' -Type 2
+        }
+        Write-Log -Message "Recovery Partition Stats
+        Recovery partition size: $Script:CurrentRecoveryPartitionSize GB
+        Recovery partition free space: $Script:CurrentRecoveryPartitionFree GB
+        Current location: Hardisk $Script:RecoveryDiskNumber Partition $Script:RecoveryPartitionNumber
+        RecoveryIsLastPartition: $($Script:RecoveryPartitionNumber -eq $LastPartitionNumber)
+        OSIsLastPartition: $((Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':','')).PartitionNumber -eq $LastPartitionNumber)
+        If the estimated WinRE size is <300MB or >2GB the recovery 'partition' is likely the OS-Drive.
+        Estimated WinRE.wim size: $($Script:CurrentRecoveryPartitionSize - $Script:CurrentRecoveryPartitionFree) GB
+        Script runtime: $Script:Runtime`n
+        More information can be found at 
+        C:\Windows\Logs\ReAgent\ReAgent.log" -Component 'StatsGathering'
+        return
     }
-    $Script:EstimatedWinRESize = $Script:CurrentRecoveryPartitionSize - $Script:CurrentRecoveryPartitionFree
-    $TimeStampStop = Get-Date
-    $RuntimeRaw = $TimeStampStop - $Script:TimeStampStart
-    $Script:Runtime = $RuntimeRaw.ToString("hh':'mm':'ss")
+    if ($Report) {
+        Write-Log -Message 'Refreshing partition information' -Component 'StatsGathering'
+        Update-RecoveryPartitionInformation
+        if (Test-Path $BackupDirectory) {
+            Get-ChildItem -Path (Join-Path -Path $BackupDirectory -ChildPath '*') -Filter *.wim -Force | Sort-Object LastWriteTime | Select-Object -Last 1 | ForEach-Object { $Script:BackupWinRESize = [math]::round($_.Length / 1GB, 2) }
+        }
+        $RecoveryVolume = Get-Volume -Partition $Script:RecoveryPartition
+        $Script:CurrentRecoveryPartitionSize = [math]::round($RecoveryVolume.Size / 1GB, 2)
+        $Script:CurrentRecoveryPartitionFree = [math]::round($RecoveryVolume.SizeRemaining / 1GB, 2)
+        $Script:EstimatedCurrentWinRESize = $Script:CurrentRecoveryPartitionSize - $Script:CurrentRecoveryPartitionFree
+        $DifferenceWinREEstimate = $Script:BackupWinRESize - $Script:EstimatedCurrentWinRESize
+        Write-Log -Message "Recovery partition size before running: $Script:InitialRecoveryPartitionSize GB
+        Recovery partition free space before running: $Script:InitialRecoveryPartitionSizeFree GB
+        Recovery partition size after running: $Script:CurrentRecoveryPartitionSize GB
+        Recovery partition free space after running: $Script:CurrentRecoveryPartitionFree GB
+        Estimated Current WinRE size: $Script:EstimatedCurrentWinRESize GB
+        Backup WinRE size: $Script:BackupWinRESize
+        Backup WinRE difference: $DifferenceWinREEstimate
+        Script runtime: $Script:Runtime`n 
+        More information can be found at 
+        C:\Windows\Logs\ReAgent\ReAgent.log
+        C:\Windows\Logs\Dism\Dism.log" -Component 'StatsGathering'
+        return
+    }
 }
 function Get-WinREStatus {
     Write-Log -Message 'Retrieving current WinRE status' -Component 'WinREStatus'
@@ -220,12 +267,11 @@ function Mount-WinRE {
         Write-Log -Message 'There is at least one other image mounted already' -Component 'MountWinRE' -Type 2
         return $false
     }
-    if(-not(Get-WinREStatus)){
-        if(-not(Enable-WinRE)){
+    if (-not(Get-WinREStatus)) {
+        if (-not(Enable-WinRE)) {
             Write-Log -Message 'WinRE could not be enabled - due to a recent change it needs to be enabled to mount the image' -Component 'MountWinRE' -Type 3
             return $false
-        }
-        else{
+        } else {
             Write-Log -Message 'Recovery Agent enabled to mount the image' -Component 'MountWinRE'
         }
     }
@@ -290,7 +336,7 @@ function Dismount-WinRE {
         Write-Log -Message 'WinRE commited changes successfully - cleaning up temporary folder' -Component 'DismountWinRE'
         Remove-Item $MountDirectory -Force -Recurse
         Write-Log -Message 'Disabling WinRE, otherwise BitLocker will complain. Will re-enable at the end' -Component 'DismountWinRE' -Type 2
-        if(-not(Disable-WinRE)){
+        if (-not(Disable-WinRE)) {
             Write-Log -Message 'Disabling WinRE failed - this means BitLocker will require the recovery key next reboot' -Component 'DismountWinRE' -Type 3
             Write-Log -Message 'After next reboot try reagentc /disable and reagentc /enable and troubleshoot if required' -Component 'DismountWinRE' -Type 2
         }
@@ -420,6 +466,38 @@ function Backup-WinRE {
         return $false
     }
 }
+function Update-RecoveryPartitionInformation {
+    <#
+    .NOTES 
+        Detecting the recovery partition can be difficult depening on how the machine was set up. 
+        This function will try multiple methods to discover the correct partition.
+    #>
+    $WinREStatus = Get-WinREStatus
+    if ($WinREStatus) {
+        $Script:ReAgentCCurrentInfo = ReAgentc.exe /info
+        $Script:ReAgentCCurrentDrive = $Script:ReAgentCCurrentInfo.split("`n")[4].Substring(31, $Script:ReAgentCCurrentInfo.split("`n")[4].length - 31).trim()
+        $Script:RecoveryDiskNumber = $Script:ReAgentCCurrentDrive.substring("\\?\GLOBALROOT\device\".length + "harddisk".length, 1)
+        $Script:RecoveryPartitionNumber = $Script:ReAgentCCurrentDrive.substring("\\?\GLOBALROOT\device\harddisk".length + "0\partition".length, 1)
+        $Script:RecoveryPartition = Get-Partition -PartitionNumber $Script:RecoveryPartitionNumber -DiskNumber $Script:RecoveryDiskNumber
+    } else {
+        Write-Log -Message 'Recovery Agent not enabled trying different method' -Component 'UpdateRecoveryPartition'
+        $Partitions = Get-Partition | where-Object { $_.GptType -eq "{de94bba4-06d1-4d40-a16a-bfd50179d6ac}" }
+        if (-not($Partitions)) {
+            $Script:RecoveryPartition = $false
+            Write-Log -Message 'No of type "Recovery" detected. The GPT type might be missing' -Component 'WinREPrerequisites' -Type 3
+            return
+        }
+        if ($Partitions.count -gt 1) {
+            Write-Log -Message 'Multiple recovery partitions detected - selecting the one with the most free space' -Component 'UpdateRecoveryPartition'
+            $Volumes = $Partitions | Get-Volume
+            $Script:RecoveryPartition = $Volumes | Sort-Object -Property SizeRemaining -Descending | Select-Object -First 1 | Get-Partition
+        } else {
+            $Script:RecoveryPartition = $Partitions
+        }
+        $Script:RecoveryDiskNumber = $Partitions.DiskNumber
+        $Script:RecoveryPartitionNumber = $Partitions.PartitionNumber
+    }
+}
 function Confirm-WinREPrerequisites {
     param(
         [switch]$InitialRun,
@@ -429,13 +507,21 @@ function Confirm-WinREPrerequisites {
         [switch]$CheckRecoveryPartitionPreStage
     )
     if ($InitialRun) {
+        if(-not($RecoveryDriveSizeInGB)){
+            $SizeToVerify = 1GB
+        }
+        else{
+            $SizeToVerify = $RecoveryDriveSizeInGB
+        }
         Write-Log -Message 'Verifying general prerequisites' -Component 'WinREPrerequisites'
         Write-Log -Message '1. Disk must use GPT formatting style' -Component 'WinREPrerequisites'
         Write-Log -Message '2. Recovery Partition must exist, unless -CreateWinREDrive is used' -Component 'WinREPrerequisites'
-        Write-Log -Message '3. (-CreateWinREDrive) WinRE must exist in in the default location' -Component 'WinREPrerequisites'
+        Write-Log -Message '3. Multiple writeable partitions on the same disk are not supported' -Component 'WinREPrerequisites'
+        Write-Log -Message '4. (-CreateWinREDrive) WinRE must exist in in the default location' -Component 'WinREPrerequisites'
         $CheckGPT = $true
         $CheckPartition = $true
         $CheckWinRE = $true
+        $CheckRecoveryPartitionEligibility = $true
     }
     if ($CheckGPT) {
         Write-Log -Message 'Verifying the disk is a GPT formatted disk. BIOS disks are not supported' -Component 'WinREPrerequisites'
@@ -445,28 +531,44 @@ function Confirm-WinREPrerequisites {
         }
     }
     if ($CheckPartition) {
-        Write-Log -Message 'Finding the "Recovery" partition. If this is named differently than this default value, you need to adjust the script' -Component 'WinREPrerequisites'
-        $Partitions = Get-Partition
-        foreach ($Partition in $Partitions) {
-            if ($Partition.Type -eq 'Recovery') {
-                $Script:RecoveryPartition = $Partition
-                break
-            }
-        }
+        Write-Log -Message 'Finding partition(s) with type "Recovery" partition' -Component 'WinREPrerequisites'
         if (-not($Script:RecoveryPartition)) {
-            $Script:RecoveryPartition = $false
+            Update-RecoveryPartitionInformation
         }
     }
     
     if ($CheckWinRE) {
-        if(-not(Get-WinREStatus)){
+        Write-Log -Message 'Verify WinRE.wim is available if the recovery agent is disabled currently' -Component 'WinREPrerequisites'
+        if (-not(Get-WinREStatus)) {
             $WinRELocation = Join-Path -Path $ENV:SystemDrive -ChildPath '\Windows\System32\Recovery\WinRE.wim'
             if (-not(Test-Path $WinRELocation)) {
                 $WinREFileMissing = $true
             }
-        }
-        else{
+        } else {
             $WinREFileMissing = $false
+        }
+    }
+    if ($CheckRecoveryPartitionEligibility) {
+        Write-Log -Message 'Verifying the potenially discovered partition for eligibility' -Component 'WinREPrerequisites'
+        if ($Script:RecoveryPartition) {
+            $LastPartitionNumber = $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber)
+            $OSDrivePartitionNumber = (Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':', '')).PartitionNumber
+            $RecoveryIsLastPartition = $Script:RecoveryPartition.PartitionNumber -eq $LastPartitionNumber
+            $OSIsLastPartition = $($OSDrivePartitionNumber -eq $LastPartitionNumber)
+            $RecoveryIsRightOfOS = ($Script:RecoveryPartition.PartitionNumber - $OSDrivePartitionNumber) -ne 1
+            $RecoveryPartitionIsOSPartition = $OSDrivePartitionNumber -eq $Script:RecoveryPartition.PartitionNumber
+            if(($Script:RecoveryPartition.size -lt $SizeToVerify)){
+                if (($RecoveryIsLastPartition -and -not($RecoveryIsRightOfOS)) -or ($Script:RecoveryPartition -and -not($OSIsLastPartition))) {
+                    Write-Log -Message 'Recovery partition found, but OS-drive is not shrinkable or OS-drive is not the last partition' -Component 'WinREPrerequisites' -Type 3
+                    Write-Log -Message 'If you need to shrink other partitions on the same disk, please contact me.' -Component 'WinREPrerequisites'
+                    return $false
+                }
+            }
+            if ($RecoveryPartitionIsOSPartition) {
+                Write-Log -Message 'The OS partition harbors the recovery partition.' -Component 'WinREPrerequisites' -Type 3
+                Write-Log -Message 'Something went wrong during imaging, but the script can not currently handle this situation, please contact me.' -Component 'WinREPrerequisites'
+                return $false
+            }
         }
     }
     if ($InitialRun) {
@@ -499,14 +601,13 @@ function Format-WinREPartition {
     param(
         $RecoveryDriveNewSize = 1GB
     )
-
     if ($RecoveryDriveNewSize -lt 1GB) {
         Write-Log -Message 'You can not shrink the recovery below the recommended minimum of 1GB' -Component 'FormatWinREPartition' -Type 3
         return $false
     }
     $DriveToShrink = ($env:SystemDrive).Substring(0, 1)
     Write-Log -Message 'Recommended minimum partition size is 1GB for WinRE - this depends on the level of customization. If anything fails, please adjust the script' -Component 'FormatWinREPartition'
-    Confirm-WinREPrerequisites -CheckPartition
+    Update-RecoveryPartitionInformation
     if (-not($Script:RecoveryPartition)) {
         Write-Log -Message 'No recovery partition detected' -Component 'FormatWinREPartition' -Type 2
         if (-not($CreateWinREDrive)) {
@@ -521,6 +622,11 @@ function Format-WinREPartition {
         Write-Log -Message 'Recovery partition detected but -CreateWinREDrive was used - switching to resize mode' -Component 'FormatWinREPartition' -Type 2
         $CreateWinREDrive = $false
     }
+    if ($Script:RecoveryPartitionNumber -ne $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber)) {
+        Write-Log -Message 'Recovery partition is not the last partition on the disk - switching mode to repartition' -Component 'FormatWinREPartition' -Type 1
+        Write-Log -Message 'Switching to repartition mode will leave an empty partition where the old recovery partition was' -Component 'FormatWinREPartition' -Type 2
+        $RepartitionMode = $true
+    }
     $WinREStatus = Get-WinREStatus
     if ($WinREStatus) {
         if (Disable-WinRE) {
@@ -531,7 +637,7 @@ function Format-WinREPartition {
         }
     } elseif ($WinREStatus -eq $false) {
         Write-Log -Message 'WinRE is already disabled' -Component 'FormatWinREPartition'
-    }      
+    }
     Write-Log -Message "Verify that the $DriveToShrink`: has adequate size left to shrink" -Component 'FormatWinREPartition'
     $WindowsPartitionCurrentSize = Get-Volume -DriveLetter $DriveToShrink
     if ($WindowsPartitionCurrentSize.SizeRemaining -ge $RecoveryDriveNewSize) {
@@ -545,18 +651,23 @@ function Format-WinREPartition {
         if ($ShrinkSizeCheck) {
             $WinREStatus = Get-WinREStatus
             if ($WinREStatus -eq $false) {
+                if ($CreateWinREDrive -or $RepartitionMode) {
+                    $NewSystemDriveSize = $WindowsPartitionSize.SizeMax - $RecoveryDriveNewSize
+                } else {
+                    $NewSystemDriveSize = $WindowsPartitionSize.SizeMax - $RecoveryDriveNewSize + $Script:RecoveryPartition.Size
+                }
                 if (-not($CreateWinREDrive)) {
-                    #This additional check is to make very sure, that the the recovery agent is disabled before we REMOVE the recovery partition
+                    #The following additional check is to make very sure, that the the recovery agent is disabled before we REMOVE the recovery partition
                     $DisableReAgentC = (Get-Volume -Partition $Script:RecoveryPartition).SizeRemaining
                     if ($DisableReAgentC -le 100MB) {
                         Write-Log -Message 'Verification of disabled ReAgentC failed - cannot continue. No changes where performed' -Component 'FormatWinREPartition' -Type 3
                         return $false              
                     }
                     Write-Log -Message 'Removing recovery partition' -Type 2
-                    Remove-Partition $Script:RecoveryPartition.DiskNumber $Script:RecoveryPartition.PartitionNumber -Confirm:$false 
-                    $NewSystemDriveSize = $WindowsPartitionSize.SizeMax - $RecoveryDriveNewSize + $Script:RecoveryPartition.Size
-                } else {
-                    $NewSystemDriveSize = $WindowsPartitionSize.SizeMax - $RecoveryDriveNewSize
+                    Remove-Partition $Script:RecoveryPartition.DiskNumber $Script:RecoveryPartition.PartitionNumber -Confirm:$false    
+                }
+                if ($RepartitionMode) {
+                    $Script:OldRecoveryPartition = New-Partition -DiskNumber $Script:RecoveryPartition.DiskNumber -UseMaximumSize -IsHidden:$true
                 }
                 Write-Log -Message 'Shrinking C: and re-creating recovery partition' -Component 'FormatWinREPartition'
                 try {
@@ -748,11 +859,17 @@ function Add-PatchesToWinRE {
 # Start Coding!
 Write-Log -Message "Patch-WinRE started at $(Get-Date)" -Component 'WinREPatchCore'
 # Only run the prereques if and only if a recovery partition needs to be touched aka resized
-if (-not(Confirm-WinREPrerequisites -InitialRun)) {
+if (-not(Confirm-WinREPrerequisites -InitialRun) -and -not($ReportOnly)) {
     Write-Log -Message 'Prerequisites could not be confirmed, please consult the log' -Type 3 -Component 'WinREPatchCore'
     Exit 1
+} else {
+    Get-Stats -InitialRun
 }
-
+if ($ReportOnly) {
+    Get-Stats -ReportOnly
+    Set-Location $CurrentLocation
+    exit 0
+}
 Write-Log -Message 'Creating backup first' -Component 'WinREPatchCore'
 if ($CreateWinREDrive) {
     Write-Log -Message 'Using CreateWinREDrive will disable the creation of backups, because it assumes that there is no recovery drive yet.' -Component 'CreateWinREDrive' -Type 2
@@ -879,15 +996,7 @@ if (-not(Get-WinREStatus)) {
 }
 if (-not($CreateWinREDrive)) {
     Write-Log -Message 'Customization finished, creating statistics' -Component 'WinREPatchCore'
-    Get-Stats
-    Write-Log -Message "WinRE size before patching: $Script:BackupWinRESize
-    RecoveryPartitionSize: $Script:CurrentRecoveryPartitionSize GB
-    RecoveryPartitionFree: $Script:CurrentRecoveryPartitionFree GB
-    EstimatedWinRESize: $Script:EstimatedWinRESize GB
-    Script runtime: $Script:Runtime`n 
-    More information can be found at 
-    C:\Windows\Logs\ReAgent\ReAgent.log
-    C:\Windows\Logs\Dism\Dism.log" -Component 'WinREPatchCore'
+    Get-Stats -Report
 }
 Write-Log -Message 'Nothing left to process' -Component 'WinREPatchCore'
 Write-Log -Message 'Thanks for using Patch-WinRE' -Component 'WinREPatchCore'
