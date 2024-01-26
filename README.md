@@ -14,6 +14,8 @@ The file offered is named "windows10.0-kb5022370-x64_216ed6897b0f0194f9d48d2142b
 
 ## Prerequisites
 
+The script generally tries to detect states that it can not handle. Please consult the log (CMTrace compatible). If you encounter a scenario, that needs fixing please contact me or open an issue so I can investigate.
+
 **Attention**
 This can only be done in an automated fashion, if the disk:
 

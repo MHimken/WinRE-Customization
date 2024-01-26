@@ -73,10 +73,10 @@ Adds a working directory as we need to create some logs and files. Default C:\Wi
     See the second link in the LINKS section to learn more about what partitioning is covered.
     Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
 .NOTES
-    Version: 3.0
+    Version: 3.1
     Versionname: REcovered Mystery
     Intial creation date: 11.01.2023
-    Last change date: 23.01.2024
+    Last change date: 27.01.2024
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
@@ -213,6 +213,31 @@ function Get-Stats {
         C:\Windows\Logs\Dism\Dism.log" -Component 'StatsGathering'
         return
     }
+}
+
+function Get-WinREImageLocation {
+    <#
+    .NOTES
+    Thanks Christopher Moore https://github.com/dreary-ennui
+    #>
+    [xml]$ReAgentXML = Get-Content "$env:SYSTEMROOT\system32\recovery\ReAgent.xml"
+    if ($ReAgentXML.WindowsRE.ImageLocation.Guid -eq "{00000000-0000-0000-0000-000000000000}") {
+        $WinREImagepath = "$env:SYSTEMROOT\System32\Recovery\WinRE.wim"
+        $WinREImageLocationPartition = (Get-Partition -DriveLetter ($ENV:SystemDrive).Substring(0, 1)).PartitionNumber
+        $WinREImageLocationDisk = (Get-Partition -DriveLetter ($ENV:SystemDrive).Substring(0, 1)).DiskNumber
+    } else {
+        $WinREImageLocationDisk = Get-Disk | Where-Object { $_.Guid -eq $ReAgentXML.WindowsRE.ImageLocation.Guid }
+        $WinREImageLocationPartition = Get-Partition -DiskNumber $WinREImageLocationDisk.DiskNumber | Where-Object { $_.Offset -eq $ReAgentXML.WindowsRE.ImageLocation.offset }
+        $WinREImagePath = Join-Path -Path $WinREImageLocationPartition.AccessPaths[0] -ChildPath "$($ReAgentXML.WindowsRE.ImageLocation.path)\WinRE.wim"
+        if (-not(Test-Path -LiteralPath $WinREImagePath)) {
+            Write-Log -Message "Image expected at $WinREImagePath but not found" -Component GetWinREImageLocation -Type 2
+            $WinREImagePath = $false
+        }
+    }
+    $Script:RecoveryImagePath = $WinREImagepath
+    $Script:ReoveryImagePathPartition = $WinREImageLocationPartition
+    $Script:RecoveryImagePathDisk = $WinREImageLocationDisk
+    return 
 }
 function Get-WinREStatus {
     Write-Log -Message 'Retrieving current WinRE status' -Component 'WinREStatus'
@@ -438,7 +463,7 @@ function Backup-WinRE {
         Write-Log -Message 'WinRE not ready to be backed up' -Component 'BackupWinRE' -Type 3
         return $false
     }
-    $WinREDefaultLocation = Join-Path -Path $ENV:SystemDrive -ChildPath '\Windows\System32\Recovery\WinRE.wim'
+    $WinRELocationFromReAgentXML = $Script:RecoveryImagePath
     $BackupFileName = ('WinRE{0}.wim' -f $Script:DateTime)
     if (-not(Test-Path $BackupDirectory)) {
         New-Item $BackupDirectory -ItemType Directory -Force
@@ -446,7 +471,7 @@ function Backup-WinRE {
         Write-Log -Message 'Backup folder already exists' -Component 'BackupWinRE'
         Write-Log -Message 'Checking if the current WinRE is already backed' -Component 'BackupWinRE'
         $Backups = Get-ChildItem (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.wim -Force
-        $ToBackupHash = Get-FileHash $WinREDefaultLocation -Algorithm MD5
+        $ToBackupHash = Get-FileHash $WinRELocationFromReAgentXML -Algorithm MD5
         if ($Backups.count -ge 1) {
             foreach ($Backup in $Backups) {
                 $BackedFile = Get-FileHash $Backup.FullName -Algorithm MD5
@@ -458,8 +483,8 @@ function Backup-WinRE {
         }
         Write-Log -Message 'No Backup of the current available WinRE found - creating backup...' -Component 'BackupWinRE'
     }
-    Write-Log -Message "Moving $WinREDefaultLocation to $BackupDirectory and name $BackupFileName" -Component 'BackupWinRE'
-    Copy-Item -Path $WinREDefaultLocation -Destination $BackupDirectory -Force -PassThru  | Rename-Item -NewName $BackupFileName
+    Write-Log -Message "Moving $WinRELocationFromReAgentXML to $BackupDirectory and name $BackupFileName" -Component 'BackupWinRE'
+    Copy-Item -LiteralPath $WinRELocationFromReAgentXML -Destination $BackupDirectory -Force -PassThru  | Rename-Item -NewName $BackupFileName
     if (Test-Path (Join-Path -Path $BackupDirectory -ChildPath $BackupFileName)) {
         return $true
     } else {
@@ -507,10 +532,9 @@ function Confirm-WinREPrerequisites {
         [switch]$CheckRecoveryPartitionPreStage
     )
     if ($InitialRun) {
-        if(-not($RecoveryDriveSizeInGB)){
+        if (-not($RecoveryDriveSizeInGB)) {
             $SizeToVerify = 1GB
-        }
-        else{
+        } else {
             $SizeToVerify = $RecoveryDriveSizeInGB
         }
         Write-Log -Message 'Verifying general prerequisites' -Component 'WinREPrerequisites'
@@ -538,9 +562,10 @@ function Confirm-WinREPrerequisites {
     }
     
     if ($CheckWinRE) {
+        Get-WinREImageLocation
         Write-Log -Message 'Verify WinRE.wim is available if the recovery agent is disabled currently' -Component 'WinREPrerequisites'
         if (-not(Get-WinREStatus)) {
-            $WinRELocation = Join-Path -Path $ENV:SystemDrive -ChildPath '\Windows\System32\Recovery\WinRE.wim'
+            $WinRELocation = $Script:RecoveryImagePath
             if (-not(Test-Path $WinRELocation)) {
                 $WinREFileMissing = $true
             }
@@ -551,16 +576,29 @@ function Confirm-WinREPrerequisites {
     if ($CheckRecoveryPartitionEligibility) {
         Write-Log -Message 'Verifying the potenially discovered partition for eligibility' -Component 'WinREPrerequisites'
         if ($Script:RecoveryPartition) {
+            Get-WinREImageLocation
             $LastPartitionNumber = $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber)
             $OSDrivePartitionNumber = (Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':', '')).PartitionNumber
+            $OSDriveDiskNumber = (Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':', '')).DiskNumber
             $RecoveryIsLastPartition = $Script:RecoveryPartition.PartitionNumber -eq $LastPartitionNumber
             $OSIsLastPartition = $($OSDrivePartitionNumber -eq $LastPartitionNumber)
-            $RecoveryIsRightOfOS = ($Script:RecoveryPartition.PartitionNumber - $OSDrivePartitionNumber) -ne 1
+            $RecoveryPartitionIsOnRightOfOSPartition = ($Script:RecoveryPartition.PartitionNumber - $OSDrivePartitionNumber) -eq 1
             $RecoveryPartitionIsOSPartition = $OSDrivePartitionNumber -eq $Script:RecoveryPartition.PartitionNumber
-            if(($Script:RecoveryPartition.size -lt $SizeToVerify)){
-                if (($RecoveryIsLastPartition -and -not($RecoveryIsRightOfOS)) -or ($Script:RecoveryPartition -and -not($OSIsLastPartition))) {
-                    Write-Log -Message 'Recovery partition found, but OS-drive is not shrinkable or OS-drive is not the last partition' -Component 'WinREPrerequisites' -Type 3
-                    Write-Log -Message 'If you need to shrink other partitions on the same disk, please contact me.' -Component 'WinREPrerequisites'
+            $RecoveryImageIsOnSameDiskAsOS = $OSDriveDiskNumber -eq ($Script:RecoveryImagePathDisk)
+            if (-not($RecoveryImageIsOnSameDiskAsOS)) {
+                Write-Log -Message 'The recovery image is on a different disk than the OS' -Component 'WinREPrerequisites' -Type 3
+                Write-Log -Message 'This will cause the recovery partition becoming a different disk. If you need help with this please contact me' -Component 'WinREPrerequisites'
+                return $false
+            }
+            if (($Script:RecoveryPartition.size -lt $SizeToVerify)) {
+                if (-not($OSIsLastPartition) -and -not($RecoveryIsLastPartition)) {
+                    Write-Log -Message 'Recovery partition found, but OS-drive is not shrinkable because it is not the last partition.' -Component 'WinREPrerequisites' -Type 3
+                    Write-Log -Message 'If you have multiple partitions on the disk and need help please contact me.' -Component 'WinREPrerequisites'
+                    return $false
+                }
+                if ($RecoveryIsLastPartition -and -not($RecoveryPartitionIsOnRightOfOSPartition)) {
+                    Write-Log -Message 'Recovery partition found, but can not use OS-drive to shrink.' -Component 'WinREPrerequisites' -Type 3
+                    Write-Log -Message 'If you have multiple partitions on the disk and need help please contact me.' -Component 'WinREPrerequisites'
                     return $false
                 }
             }
@@ -578,7 +616,7 @@ function Confirm-WinREPrerequisites {
         }
         if ($CreateWinREDrive) { 
             if (-not($Script:RecoveryPartition) -and $WinREFileMissing) {
-                Write-Log -Message 'There is no recovery partition, but WinRE.wim is missing from %systemroot%\System32\Recovery\WinRE.wim' -Component 'WinREPrerequisites' -Type 3
+                Write-Log -Message "There is no recovery partition, but WinRE.wim is missing from $WinRELocation" -Component 'WinREPrerequisites' -Type 3
                 Write-Log -Message 'You need a fresh WinRE from inside a Windows ISO (inside the Install.wim) and copy it to this location - aborting' -Component 'WinREPrerequisites'
                 return $false
             } else {

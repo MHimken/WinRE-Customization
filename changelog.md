@@ -1,5 +1,13 @@
 # Changes
 
+## 27th of January 2024 - Version 3.1
+
+Thanks to Christopher Moore <https://github.com/dreary-ennui> input the detection for the WinRE is now more dynamic.
+
+- Add: New function Get-WinREImageLocation
+- Change: Adjusted occurences that use the WinRE image location like Backup-WinRE and Confirm-WinREPrerequisites
+- Change: Updated logic for Confirm-WinREPrerequisites. Several new error scenarios added, that the script can not handle
+
 ## 23th of January 2024 - Version 3.0
 
 New major Version 3.0 aka 'REcovered Mystery'.
