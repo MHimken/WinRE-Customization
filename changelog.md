@@ -1,5 +1,14 @@
 # Changes
 
+## 13th of February 2024 - Version 3.2
+
+- Add: New function Get-ScriptPath (see change below)
+- Add: New function Update-ReAgentXML. Will reset the reagent.xml to the default location when disabled (%SYSTEMROOT%\System32\recovery). There seems to be no good reason to have it elsewhere - yet.
+- Change: Current script folder detection will now fail when using ISE, with a help message about what needs to be done before the script will run. This is because ISE is compiled with "legacyPathHandling = true". It must be temporarily disabled before the script can run successfully. This does not affect any other way to run this script.
+- Change: Backup-WinRE will now create a backup of the .wim file without disabling the recovery agent first. This is to avoid issues with reagent.xml configurations where the file would be in an unexpected location.
+- Change: Get-WinREImageLocation will now handle offline and online locations, depending on if the recovery agent is activated or not.
+- Change: Confirm-WinREPrerequisites had extensive rework to accomodate correctly for different recovery partition locations and partition configurations in general. Reminder: **If you have more than one partition on the OSDisk this script won't work**
+
 ## 27th of January 2024 - Version 3.1
 
 Thanks to Christopher Moore <https://github.com/dreary-ennui> input the detection for the WinRE is now more dynamic.
