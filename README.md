@@ -19,7 +19,7 @@ The script generally tries to detect states that it can not handle. Please consu
 **Attention**
 This can only be done in an automated fashion, if the disk:
 
-* is formatted as recommended for UEFI (with the recovery partition being at the very end of the disk) and
+* is formatted in UEFI using GPT partitions (this is verified) and
 * if the sysdrive has enough space and no blocking files to shrink it to the required size - this is verified.
 
 A description of each parameter comes with the script.
