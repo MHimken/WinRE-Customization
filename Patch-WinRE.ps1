@@ -73,10 +73,10 @@
     See the second link in the LINKS section to learn more about what partitioning is covered.
     Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
 .NOTES
-    Version: 3.2
+    Version: 3.2.1
     Versionname: REcovered Mystery
     Intial creation date: 11.01.2023
-    Last change date: 06.02.2024
+    Last change date: 27.02.2024
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
@@ -160,7 +160,12 @@ function Write-Log {
         $LogMessage = "<![LOG[$Message" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
         $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $LogFile
     } elseif ($ToConsole) {
-        Write-Output "T:$Type C:$Component M:$Message"
+        switch ($type) {
+            1 { Write-Host "T:$Type C:$Component M:$Message" }
+            2 { Write-Host "T:$Type C:$Component M:$Message" -BackgroundColor Yellow -ForegroundColor Black }
+            3 { Write-Host "T:$Type C:$Component M:$Message" -BackgroundColor Red -ForegroundColor White }
+            default { Write-Host "T:$Type C:$Component M:$Message" }
+        }
     }
 }
 function Get-Stats {
@@ -614,10 +619,9 @@ function Confirm-WinREPrerequisites {
         $CheckGPT = $true
         $CheckPartition = $true
         $CheckWinRE = $true
-        if(-not($CreateWinREDrive)){
+        if (-not($CreateWinREDrive)) {
             $CheckRecoveryPartitionEligibility = $true
-        }
-        else{
+        } else {
             $CheckDiskEligibility = $true
         }
     }
@@ -647,15 +651,14 @@ function Confirm-WinREPrerequisites {
             $WinREFileMissing = $true
         }
     }
-    if($CheckDiskEligibility){
-        if($Script:RecoveryPartition){
+    if ($CheckDiskEligibility) {
+        if ($Script:RecoveryPartition) {
             Write-Log -Message 'Found different recovery partition - mode will be switched later' -Component 'WinREPrerequisites' -Type 3
         }
         if ($WinREFileMissing) {
             Write-Log -Message 'No WinRE location found, can not create WinRE drive' -Component 'WinREPrerequisites' -Type 3
             return $false
-        }
-        else {
+        } else {
             $OSDriveDiskNumber = (Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':', '')).DiskNumber
             $RecoveryImageIsOnSameDiskAsOS = $OSDriveDiskNumber -eq $Script:RecoveryImagePathDisk
             if (-not($RecoveryImageIsOnSameDiskAsOS)) {
@@ -747,7 +750,7 @@ function Format-WinREPartition {
         $CreateWinREDrive = $false
     }
     if (-not($CreateWinREDrive) ) {
-        if(($Script:RecoveryPartitionNumber -ne $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber))){
+        if (($Script:RecoveryPartitionNumber -ne $((Get-Partition -DiskNumber $Script:RecoveryDiskNumber | Select-Object -Last 1).PartitionNumber))) {
             Write-Log -Message 'Recovery partition is not the last partition on the disk - switching mode to repartition' -Component 'FormatWinREPartition' -Type 1
             Write-Log -Message 'Switching to repartition mode will leave an empty partition where the old recovery partition was' -Component 'FormatWinREPartition' -Type 2
             $RepartitionMode = $true
