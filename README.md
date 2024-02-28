@@ -72,30 +72,16 @@ If you used this script to apply your patches, you should be fine. The obvious c
 employee and cannot vouch for the accuracy of the information provided by what I have just described. You still use this
 script at your own risk!
 
-## Latest changes
+## Noteworthy content
 
-28.07.2023:
+CVEs:
+[CVE-2022-41099](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2022-41099)
+[CVE-2024-20666](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2024-20666)
 
-* Added new switch OnlyCreateWinREDrive which allows for the creation of a non-existing WinRE drive. However, right now you still
-need to have the WinRE.wim in place. The default location is %systemroot%\System32\Recovery\ - unhide system files in explorer.
-* Resize-Recoverypartition now checks for GPT. MBR with legacy BIOS is **not supported**
-* This is the last time minor changes will be added here to the README, unless they're major changes. Check <https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md> for more changes.
+Patches:
 
-17.07.2023:
-
-* This script can also help with CVE-2023-24932 (<https://msrc.microsoft.com/update-guide/vulnerability/CVE-2023-24932>)
-which requires to apply a SafeOS (SOS) Patch to WinRE. You can find these by using this link to the catalog
-<https://www.catalog.update.microsoft.com/Search.aspx?q=2023-07+safe+os>. However, in my research I couldn't manage to ever break
-anything with resetting any machine - it still kept working. You're welcome to report feedback if you find any issues
-
-### Older Updates
-
-* MUI support added (Major change)
-  * Removed all text based verifications and replaced them
-* Now accepts GDRDU, LCU, SOS and DU as patch inputs (Major change)
-  * Merged several functions that did almost the same - added detection methods accordingly
-  * Renamed several parameters to reflect function merges
-* Verbose removed for now, needs to be switch to cmdletbind
-* Added "AbortIfFailed"
+* [Windows Server 2022 - KB5034439](https://support.microsoft.com/en-us/topic/kb5034439-windows-recovery-environment-update-for-windows-server-2022-january-9-2024-6f9d26e6-784c-4503-a3c6-0beedda443ca)
+* [Windows 11 21H2 - KB5034440](https://support.microsoft.com/en-us/topic/kb5034440-windows-recovery-environment-update-for-windows-11-version-21h2-january-9-2024-1e07724a-3547-40f5-99ff-862cc48fd523)
+* [Windows 10 - KB5034441](https://support.microsoft.com/en-us/topic/kb5034441-windows-recovery-environment-update-for-windows-10-version-21h2-and-22h2-january-9-2024-62c04204-aaa5-4fee-a02a-2fdea17075a8)
 
 Thanks to everyone that helped build this, especially <https://homotechsual.dev/>
