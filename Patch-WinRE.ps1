@@ -416,11 +416,11 @@ function Update-ReAgentXML {
         }
     }
     $ReAgentXMLLocation = "$env:SYSTEMROOT\System32\Recovery\ReAgent.xml"
-    $ToBackupHash = Get-FileHash -LiteralPath $ReAgentXMLLocation -Algorithm MD5
+    $ToBackupHash = Get-FileHash -LiteralPath $ReAgentXMLLocation -Algorithm SHA256
     $XMLBackups = Get-ChildItem (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.xml -Force
     if ($XMLBackups.count -ge 1) {
         foreach ($Backup in $XMLBackups) {
-            $BackedFile = Get-FileHash $Backup.FullName -Algorithm MD5
+            $BackedFile = Get-FileHash $Backup.FullName -Algorithm SHA256
             if ($BackedFile.Hash -eq $ToBackupHash.Hash) {
                 Write-Log -Message "Full ReAgentXML backup found $($Backup.Name)" -Component 'UpdateReAgentXML'
                 $XMLBackupFound = $true
@@ -431,7 +431,7 @@ function Update-ReAgentXML {
         $XMLBackupFileName = ('ReAgent{0}.xml' -f $Script:DateTime)
         $XMLBackupFilePath = Join-Path $BackupDirectory -ChildPath $XMLBackupFileName
         Copy-Item $ReAgentXMLLocation $XMLBackupFilePath -Force
-        $XMLBackupSuccessful = (Get-FileHash $XMLBackupFilePath -Algorithm MD5).Hash -eq $ToBackupHash.Hash
+        $XMLBackupSuccessful = (Get-FileHash $XMLBackupFilePath -Algorithm SHA256).Hash -eq $ToBackupHash.Hash
     } 
     if (-not($XMLBackupSuccessful)) {
         Write-Log -Message 'Could not create a backup copy of ReAgent.xml - please ensure that third party Antivirus is disabled' -Component 'UpdateReAgentXML'
