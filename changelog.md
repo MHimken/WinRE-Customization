@@ -3,6 +3,8 @@
 ## 18th of August 2024 - Version 3.2.2
 
 - Fix for issue #13 where the recovery partition was unexpectedly encrypted prematurely.
+- Update: Readme now mentions KB5042562
+- Update: Rewrote small parts of the readme
 
 ## 27th of February 2024 - Version 3.2.1
 
