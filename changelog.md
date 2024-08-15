@@ -1,5 +1,9 @@
 # Changes
 
+## 18th of August 2024 - Version 3.2.2
+
+- Fix for issue #13 where the recovery partition was unexpectedly encrypted prematurely.
+
 ## 27th of February 2024 - Version 3.2.1
 
 - Change: Change Write-Log to use Write-Host instead of Write-Output. Write-Output was breaking the script

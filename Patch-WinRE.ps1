@@ -73,10 +73,10 @@
     See the second link in the LINKS section to learn more about what partitioning is covered.
     Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
 .NOTES
-    Version: 3.2.1
+    Version: 3.2.2
     Versionname: REcovered Mystery
     Intial creation date: 11.01.2023
-    Last change date: 27.02.2024
+    Last change date: 15.08.2024
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
@@ -299,7 +299,7 @@ function Disable-WinRE {
 }
 function Enable-WinRE {
     $EnableRE = ReAgentc.exe /enable
-    if (($EnableRE[0] -notmatch ".*\d+.*") -and $LASTEXITCODE -eq 0) {
+    if ($LASTEXITCODE -eq 0 -and ($EnableRE[0] -notmatch ".*\d+.*")) {
         Write-Log -Message 'Enabled WinRE' -Component 'EnableWinRE'
         Get-WinREImageLocation -OnlineLocation
         return $true
@@ -814,9 +814,9 @@ function Format-WinREPartition {
                 # Unfortunately Set-Partition has no -Attributes parameter, so we need to use diskpart.
                 $Diskpart = @"
 select disk $((Get-Partition -DriveLetter $DriveToShrink).DiskNumber)
-create partition primary`
-format quick fs=ntfs label='Recovery'`
+create partition primary id=de94bba4-06d1-4d40-a16a-bfd50179d6ac`
 gpt attributes=0x8000000000000001
+format quick fs=ntfs label='Recovery'`
 "@
                 if (Test-Path -Path '.\diskpart.txt') { Get-Item -Path '.\diskpart.txt' | Remove-Item -Force }
                 if (Test-Path -Path '.\diskpart.log') { Get-Item -Path '.\diskpart.log' | Remove-Item -Force }
@@ -843,7 +843,8 @@ gpt attributes=0x8000000000000001
                 Get-Item '.\diskpart.txt' | Remove-Item -Force
                 if ($DiskpartStatus) {
                     Write-Log -Message 'Recovery partition recreated. Define recovery partition using GPTType' -Component 'FormatWinREPartition'
-                    Set-Partition -DiskNumber $Script:RecoveryPartition.DiskNumber -PartitionNumber $Script:RecoveryPartition.PartitionNumber -GptType '{de94bba4-06d1-4d40-a16a-bfd50179d6ac}'
+                    #The following line will be left here for legacy purposes. It should not be required to seperate the GptType assignment and partition creation anymore.
+                    #Set-Partition -DiskNumber $Script:RecoveryPartition.DiskNumber -PartitionNumber $Script:RecoveryPartition.PartitionNumber -GptType '{de94bba4-06d1-4d40-a16a-bfd50179d6ac}'
                     Write-Log -Message 'Recovery partition defined. Enabling ReAgentC' -Component 'FormatWinREPartition'
                     if (-not(Enable-WinRE)) {
                         Write-Log -Message 'WinRE could not be enabled please consult the logs. Its likely you need to recreate the partition manually' -Component 'FormatWinREPartition' -Type 3
