@@ -1031,7 +1031,7 @@ if ($FoDDirectory) {
 }
 if ($FilesDriver) {
     if (Test-Path -Path $FilesDriver) {
-        if ((Get-ItemProperty $FilesDriver).Attributes -eq 'Directory') {
+        if ((Get-ItemProperty $FilesDriver).Attributes -match 'Directory') {
             if (-not(Add-DriverToWinRE -Drivers $FilesDriver)) {
                 Write-Log -Message 'Something went wrong while applying drivers, please consult the logs' -Component 'WinREPatchCore' -Type 3
                 Exit 1
@@ -1058,7 +1058,7 @@ if ($PatchFilesGDRDUorLCU) {
         Write-Log -Message "Verifying recovery partition size is at least set to the default: $(Format-WinREPartition)" -Component 'WinREPatchCore'
     }
     if (Test-Path -Path $PatchFilesGDRDUorLCU) {
-        if ((Get-ItemProperty $PatchFilesGDRDUorLCU).Attributes -eq 'Directory') {
+        if ((Get-ItemProperty $PatchFilesGDRDUorLCU).Attributes -match 'Directory') {
             $MSUFiles = (Get-ChildItem $PatchFilesGDRDUorLCU -Filter *.msu -Force)
             $CABFiles = (Get-ChildItem $PatchFilesGDRDUorLCU -Filter *.cab -Force)
             if ($CABFiles -and $MSUFiles) {
@@ -1090,7 +1090,7 @@ if ($PatchFilesGDRDUorLCU) {
 if ($PatchFilesDUorSOS) {
     Write-Log -Message 'Applying SafeOS or Dynamic Updates' -Component 'WinREPatchCore'
     if (Test-Path -Path $PatchFilesDUorSOS) {
-        if ((Get-ItemProperty $PatchFilesDUorSOS).Attributes -eq 'Directory') {
+        if ((Get-ItemProperty $PatchFilesDUorSOS).Attributes -match 'Directory') {
             $CABFiles = (Get-ChildItem $PatchFilesDUorSOS -Filter *.cab -Force)
             if (-not(Add-PatchesToWinRE -Files $CABFiles -DUorSOS)) {
                 Write-Log -Message 'Something went wrong while applying patches, please consult the logs' -Component 'WinREPatchCore' -Type 3
