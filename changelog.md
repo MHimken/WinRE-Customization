@@ -1,8 +1,29 @@
 # Changes
 
+## 16th of November 2025 - Version 3.3.1
+
+- Add: New ParameterSet 'CreateWinREDrive' to better specify other valid parameters
+- Add: New ParameterSet 'ReplaceWIM' to better specify other valid parameters
+- Add: Added suggestion from [#14](https://github.com/MHimken/WinRE-Customization/issues/14)
+- Fix: When using -ReplaceWIM or -CreateWinREDrive with a custom WIM file, the script now correctly applies the original file attributes to the new WinRE.wim file after replacement or creation. This ensures that the WinRE.wim file maintains its intended visibility and system attributes, preventing potential access issues.
+- Update: Adjusted examples in the help documentation to reflect new parameter sets
+- Update: Used #15 as reference for more fixes
+
+## 29th of September 2025 - Version 3.3.0 (not published)
+
+- Add: Parameter sets are now in place
+- Fix: several logic issues when using -CreateWinREDrive
+- Fix: for issue #15
+- Added feature request (see #14)
+- Add: New Parameter ReplaceWIM
+- Add: New Parameter WIMFilePath
+- Add: New function New-WIM
+- Update: Description of new parameters
+- Update: Added more examples
+
 ## 18th of August 2024 - Version 3.2.2
 
-- Fix for issue #13 where the recovery partition was unexpectedly encrypted prematurely.
+- Fix: for issue #13 where the recovery partition was unexpectedly encrypted prematurely.
 - Update: Readme now mentions KB5042562
 - Update: Rewrote small parts of the readme
 
