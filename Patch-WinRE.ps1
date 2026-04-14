@@ -937,9 +937,9 @@ function Format-WinREPartition {
                 # Unfortunately Set-Partition has no -Attributes parameter, so we need to use diskpart.
                 $Diskpart = @"
 select disk $((Get-Partition -DriveLetter $DriveToShrink).DiskNumber)
-create partition primary id=de94bba4-06d1-4d40-a16a-bfd50179d6ac`
+create partition primary id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
 gpt attributes=0x8000000000000001
-format quick fs=ntfs label='Recovery'`
+format quick fs=ntfs label='Recovery'
 "@
                 if (Test-Path -Path '.\diskpart.txt') { Get-Item -Path '.\diskpart.txt' | Remove-Item -Force }
                 if (Test-Path -Path '.\diskpart.log') { Get-Item -Path '.\diskpart.log' | Remove-Item -Force }
