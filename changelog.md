@@ -1,6 +1,5 @@
 # Changes
 
-
 ## 5th of August 2026 - Version 3.3.2
 
 - Fix: Type mismatch in `Get-WinREImageLocation` where `$Script:RecoveryImagePathDisk` was assigned a disk object instead of an integer; renamed variable to `$Script:RecoveryImagePathDiskNumber` and removed erroneous `.DiskNumber` property call from `Confirm-WinREPrerequisites`
