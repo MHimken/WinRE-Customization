@@ -88,10 +88,10 @@
     See the second link in the LINKS section to learn more about what partitioning is covered.
     Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
 .NOTES
-    Version: 3.3.1
+    Version: 3.3.2
     Versionname: REinstall
     Intial creation date: 11.01.2023
-    Last change date: 16.11.2025
+    Last change date: 05.08.2026
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
@@ -330,7 +330,8 @@ function Get-WinREImageLocation {
 
     $Script:RecoveryImagePath = $WinREImagePath
     $Script:RecoveryImagePathPartition = $WinREImageLocationPartition
-    $Script:RecoveryImagePathDisk = $WinREImageLocationDisk
+    $Script:RecoveryImagePathDiskNumber
+     = $WinREImageLocationDisk
     return 
 }
 function Get-WinREStatus {
@@ -773,7 +774,8 @@ function Confirm-WinREPrerequisites {
             Write-Log -Message 'Found existing recovery partition - mode will be switched later. Do not use -CreateWinREDrive in this case' -Component 'WinREPrerequisites' -Type 2
         }
         $OSDriveDiskNumber = (Get-Partition -DriveLetter ($ENV:SystemDrive).Replace(':', '')).DiskNumber
-        $RecoveryImageIsOnSameDiskAsOS = $OSDriveDiskNumber -eq ($Script:RecoveryImagePathDisk).DiskNumber
+        $RecoveryImageIsOnSameDiskAsOS = $OSDriveDiskNumber -eq $Script:RecoveryImagePathDiskNumber
+
         if (-not($RecoveryImageIsOnSameDiskAsOS)) {
             Write-Log -Message 'The recovery image is on a different disk than the OS' -Component 'WinREPrerequisites' -Type 3
             Write-Log -Message 'This will cause the recovery partition becoming a different disk. If you need help with this please contact me' -Component 'WinREPrerequisites'
