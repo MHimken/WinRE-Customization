@@ -330,8 +330,7 @@ function Get-WinREImageLocation {
 
     $Script:RecoveryImagePath = $WinREImagePath
     $Script:RecoveryImagePathPartition = $WinREImageLocationPartition
-    $Script:RecoveryImagePathDiskNumber
-     = $WinREImageLocationDisk
+    $Script:RecoveryImagePathDiskNumber = $WinREImageLocationDisk
     return 
 }
 function Get-WinREStatus {
