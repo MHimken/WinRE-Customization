@@ -2,14 +2,18 @@
 .SYNOPSIS
     Customizes WinRE. This script will apply patches and drivers. Will resize recovery partition if needed.
 .DESCRIPTION
-    This script was created to automate the remediation of CVE-2022-41099, but can also be used to automate the patching and customization of WinRE. 
+    This script was created to automate the remediation of CVE-2022-41099, but can also be used to automate the patching and customization of WinRE.
     If specified, the script will check the size of your recovery partition and resize it if necessary.
-    
+
     !!There is an order that has be followed when adding things to _any_ type of Windows Image see https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/servicing-the-image-with-windows-updates-sxs !!
     
     #####ATTENTION#####
     This can only be done automatically if the sysdrive has enough space and no blocking files to shrink it to the required size. This is verified.
     This script will attempt to use the default sequence recommended for OS GPT partitions. Meaning the recovery drive will always be created by shrinking the OS drive.
+
+    Use -WhatIf to preview a run. Every change (ReAgentC, DISM, partitioning, copies and deletions) is reported instead of performed, while the current state is still read.
+    A preview requires administrator rights as well and writes its messages to the console instead of a log file. Use -Confirm to be asked before each change.
+    A graphical front end is available with Start-PatchWinREGUI.ps1.
 .PARAMETER WorkingDirectory
     Adds a working directory as we need to create some logs and files. Default C:\WinRE-Customization\
 .PARAMETER BackupDirectory
@@ -19,35 +23,38 @@
 .PARAMETER LogDirectory
     Specify a folder to output logs to. Default is C:\WinRE-Customization\Logs
 .PARAMETER FoDDirectory
-    #ToDo Features and Language Packs go here
+    Not implemented yet. Reserved for Features on Demand and language packs.
 .PARAMETER PatchFilesGDRDUorLCU
     Use to apply the latest cumulative update (LCU) or general distribution release dynamic update (GDRDU).
     Accepts the path to a folder containing CABs/MSUs or a single CAB/MSU file. Please make sure that you provide this script with the appropriate OS version file.
-    Attention: SSUs _must_ start with "ssu" to be applied first.
+    Attention: SSUs _must_ start with "ssu" to be applied first. On Windows 10 a warning is shown if no file starting with "ssu" is provided.
     Attention: To ensure that you have enough space left on your recovery partition after patching with a GDRDU/LCU, it will check if the minimum of 1GB is configured and otherwise extend the partition (aka recreate).
 .PARAMETER PatchFilesDUorSOS
     Use this to apply the Dynamic Update (DU) and Safe OS (SOS) updates.
     Accepts the path to a folder containing CABs or a single CAB file. Please make sure you provide this script with the appropriate OS version file(s).
 .PARAMETER RecoveryDriveSizeInGB
-    Specify the size of the recovery disk. The default is 1GB. If not specified, the size is assumed to be appropriate.
+    Specify the size of the recovery disk as a PowerShell size literal, for example 2GB. A plain number is interpreted as bytes. The minimum is 1GB.
+    If not specified, the size is assumed to be appropriate. -CreateWinREDrive and -PatchFilesGDRDUorLCU fall back to 1GB.
     Caution: It is recommended to set this, it will be checked before changing it.
 .PARAMETER FilesDriver
     Specify the path to a folder containing the drivers - must have at least one *.inf file. You can also specify a single path to an *.inf file.
 .PARAMETER DeleteBackups
-    Removes all .wim files in the folder specified through -BackupDirectory.
+    Set to $true to remove all .wim and .xml files (WinRE.wim and ReAgent.xml backups) in the folder specified through -BackupDirectory at the end of a successful run.
+    Make sure the backup folder only contains backups created by this script. This is not a switch, use -DeleteBackups $true.
 .PARAMETER CreateWinREDrive
-    This parameter allows you to create a recovery drive only. It assumes that you don't need a backup of WinRE at this point. However, the activation will fail if WinRE.wim is missing from %systemroot%/system32/recovery.
+    This parameter allows you to create a recovery drive only. It assumes that you don't need a backup of WinRE at this point.
+    However, the activation will fail if WinRE.wim is missing from %systemroot%/system32/recovery. Use -WIMFilePath to provide one.
 .PARAMETER DoNotExpandRecoveryPartition
     By default, the script will check if the recovery partition is at least 1GB in size and expand it if necessary.
-    Use this switch to disable this functionality. Note that patching might fail if there is not enough space.
+    Set to $true to disable this functionality. Note that patching might fail if there is not enough space. This is not a switch, use -DoNotExpandRecoveryPartition $true.
 .PARAMETER ReplaceWIM
     Will replace the currently existing WinRE.wim or install one if it doesn't exist. Requires WIMFilePath. 
 .PARAMETER WIMFilePath
     The file to the WinRE.wim you want to use. Grab this (ideally) unmodified from a matching OS-Version ISO. 
     Sources\Install.wim -> mount with matching index or use 7-Zip to open -> <INDEX>\Windows\System32\Recovery\Winre.wim
 .PARAMETER AbortIfFailed
-    If applying content fails, this switch will automatically discard all changes when the image is unmounted.
-    This will cause the script to exit successfully if the content couldn't be applied(!)
+    If applying content fails, this switch will automatically discard all changes when the image is unmounted. The script then exits with exit code 1.
+    Without this switch, the packages that were applied successfully are committed even if other packages failed.
 .PARAMETER ReportOnly
     This switch returns only some general information about the current state of the recovery drive and recovery agent.
     This parameter causes the script to always run successfully, as it is intended for information gathering purposes.
@@ -62,42 +69,45 @@
     Patch-WinRE.ps1
 .EXAMPLE
     This example will create a new recovery partition and add a WinRE.wim from a custom location. It will also remove the backups created by this script.
-    Patch-WinRE.ps1 -CreateWinREDrive -WIMFilePath C:\Temp\WinRE.wim -DeleteBackups
+    Patch-WinRE.ps1 -CreateWinREDrive -WIMFilePath C:\Temp\WinRE.wim -DeleteBackups $true
 .EXAMPLE
-    This example will use a subfolder named "LCU" in the current script location as a resource for MSUs. It will resize the recovery partition to 2GB if necessary.
+    This example will use the folder C:\Temp\LCU as a resource for MSUs. It will resize the recovery partition to 2GB if necessary.
     Backups will be written to C:\WinREBackup\. Temporarily, C:\WinREMounted\ is used as the mounting directory.
-    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\temp\LCU -RecoveryDriveSizeInGB 2GB -MountDirectory C:\WinREMounted\ -BackupDirectory C:\WinREBackup\
+    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\Temp\LCU -RecoveryDriveSizeInGB 2GB -MountDirectory C:\WinREMounted\ -BackupDirectory C:\WinREBackup\
 .EXAMPLE
-    This will delete all backups created by Patch-WinRE in a custom folder.
-    Patch-WinRE.ps1 -BackupDirectory C:\Temp\ -DeleteBackups
+    This will create a backup of WinRE in a custom folder and then delete all *.wim and *.xml files in that folder. Only use a folder that contains nothing but Patch-WinRE backups.
+    Patch-WinRE.ps1 -BackupDirectory D:\WinREBackups\ -DeleteBackups $true
 .EXAMPLE
-    Will perform all three main functions of this script. Create a backup of the WinRE, resize the partition to 1GB, apply patches and add drivers from a folder
-    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\temp\LCU -RecoveryDriveSizeInGB 1GB -FilesDriver C:\Temp\Drivers\x64\
+    Will create a backup of the WinRE, resize the partition to 1GB if necessary and apply patches. Drivers have to be added in a separate run using -FilesDriver.
+    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\Temp\LCU -RecoveryDriveSizeInGB 1GB
 .EXAMPLE
     This example will apply all CAB/MSUs from the specified directory and discard changes if any of the patches fail.
-    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\temp\LCU -AbortIfFailed
+    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\Temp\LCU -AbortIfFailed
 .EXAMPLE
     This example will create a recovery partition only - nothing else.
     Patch-WinRE.ps1 -CreateWinREDrive
 .EXAMPLE
     This example will add a driver to WinRE - you need to make sure that the driver is compatible with WinRE (e.g. network drivers for PXE boot). You can also specify a single *.inf file.
     This example will not resize the recovery partition even if it is too small. Deleting the Backups might make sense if this is used in an automated fashion.
-    Patch-WinRE.ps1 -FilesDriver C:\Temp\Drivers\x64\driver.inf -DoNotExpandRecoveryPartition:$true -DeleteBackups
+    Patch-WinRE.ps1 -FilesDriver C:\Temp\Drivers\x64\driver.inf -DoNotExpandRecoveryPartition $true -DeleteBackups $true
 .EXAMPLE
     This example will expand the recovery partition to 1GB and pipe all log messages to the current output instead of the log file. 
     See the second link in the LINKS section to learn more about what partitioning is covered.
     Patch-WinRE.ps1 -RecoveryDriveSizeInGB 1GB -ToConsole
+.EXAMPLE
+    This example shows which changes applying the patches would perform, without changing anything.
+    Patch-WinRE.ps1 -PatchFilesGDRDUorLCU C:\Temp\LCU -WhatIf
 .NOTES
-    Version: 3.3.2
-    Versionname: REinstall
-    Intial creation date: 11.01.2023
-    Last change date: 05.08.2026
+    Version: 3.4.0
+    Versionname: GUI my WinRE
+    Initial creation date: 11.01.2023
+    Last change date: 19.11.2026
     Latest changes: https://github.com/MHimken/WinRE-Customization/blob/main/changelog.md
 .LINK
     https://manima.de/2023/01/modify-winre-patches-drivers-and-cve-2022-41099/
     https://manima.de/2024/01/winre-patching-round-2/
 #>
-[CmdletBinding()]
+[CmdletBinding(SupportsShouldProcess = $true)]
 param(
     # Select mode
     # FoD
@@ -177,19 +187,22 @@ function Get-ScriptPath {
 function Initialize-Script {
     Get-ScriptPath
     $Script:TimeStampStart = Get-Date
-    if (-not(Test-Path $WorkingDirectory )) { New-Item $WorkingDirectory -ItemType Directory -Force | Out-Null }
+    if (-not(Test-Path $WorkingDirectory )) { New-Item $WorkingDirectory -ItemType Directory -Force -Confirm:$false | Out-Null }
     $Script:RecoveryPartition = $false
     $Script:CurrentLocation = Get-Location
-    Set-Location $WorkingDirectory
+    if (-not($Script:PreviewMode) -or (Test-Path $WorkingDirectory)) { Set-Location $WorkingDirectory }
     # Setting some variables - you can change these if you know what you're doing
     $Script:DateTime = Get-Date -Format ddMMyyyy_hhmmss
-    if (-not(Test-Path $LogDirectory)) { New-Item $LogDirectory -ItemType Directory -Force | Out-Null }
+    if (-not(Test-Path $LogDirectory)) { New-Item $LogDirectory -ItemType Directory -Force -Confirm:$false | Out-Null }
     $LogPrefix = 'Patch'
     $Script:LogFile = Join-Path -Path $LogDirectory -ChildPath ('{0}_{1}.log' -f $LogPrefix, $DateTime)
     Write-Log -Message 'Script initialized' -Component 'Initialization'
+    if ($Script:PreviewMode) {
+        Write-Log -Message 'Preview mode (-WhatIf): changes are reported but not performed. Messages are written to the console instead of a log file' -Component 'Initialization'
+    }
     #Show parameters selected
     Write-Log -Message "`nParameter set selected: $($PSCmdlet.ParameterSetName)" -Component 'Initialization'
-    Write-Log -Message "`nOptions:`n Recovery Partition Size: $RecoveryDriveSizeInGB `n Do not expand: $(if($DoNotExpandRecoveryPartition) { 'Yes' } else { 'No' })`n Abort If Failed: $(if($AbortIfFailed) { 'Yes' } else { 'No' })`n Delete Backups: $DeleteBackups`n Report Only: $ReportOnly`n To Console: $ToConsole" -Component 'Initialization'
+    Write-Log -Message "`nOptions:`n Recovery Partition Size: $RecoveryDriveSizeInGB `n Do not expand: $(if($DoNotExpandRecoveryPartition) { 'Yes' } else { 'No' })`n Abort If Failed: $(if($AbortIfFailed) { 'Yes' } else { 'No' })`n Delete Backups: $DeleteBackups`n Report Only: $ReportOnly`n To Console: $ToConsole`n Preview (WhatIf): $Script:PreviewMode" -Component 'Initialization'
     Write-Log -Message "`nDirectories:`n Working: $WorkingDirectory`n Backup: $BackupDirectory`n Mount: $MountDirectory`n Log: $LogDirectory" -Component 'Initialization'
 }
 function Write-Log {
@@ -210,10 +223,10 @@ function Write-Log {
     $Date = Get-Date -Format 'MM-dd-yyyy'
     if (-not($Component)) { $Component = 'Runner' }
     if (-not($Type)) { $Type = 1 }
-    if (-not($ToConsole)) {
+    if (-not($ToConsole) -and -not($Script:PreviewMode)) {
         $LogMessage = "<![LOG[$Message" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
-        $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $Script:LogFile
-    } elseif ($ToConsole) {
+        $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $Script:LogFile -Confirm:$false
+    } else {
         switch ($type) {
             1 { Write-Host "T:$Type C:$Component M:$Message" }
             2 { Write-Host "T:$Type C:$Component M:$Message" -BackgroundColor Yellow -ForegroundColor Black }
@@ -221,6 +234,28 @@ function Write-Log {
             default { Write-Host "T:$Type C:$Component M:$Message" }
         }
     }
+}
+function Confirm-PatchStep {
+    <#
+    .SYNOPSIS
+        Central ShouldProcess gate for every change this script performs.
+    .DESCRIPTION
+        Returns 'Run' if the change should be performed, 'Preview' if -WhatIf is active and 'Declined' if the user answered
+        No to a -Confirm prompt. The ShouldProcess of the script itself is used, because functions with [Parameter()]
+        attributes get their own $PSCmdlet without SupportsShouldProcess.
+    #>
+    param(
+        [string]$Target,
+        [string]$Action
+    )
+    if ($Script:PatchCmdlet.ShouldProcess($Target, $Action)) {
+        return 'Run'
+    }
+    if ($Script:PreviewMode) {
+        return 'Preview'
+    }
+    Write-Log -Message "Declined: $Action ($Target)" -Component 'ConfirmPatchStep' -Type 2
+    return 'Declined'
 }
 function Get-Stats {
     param(
@@ -334,7 +369,15 @@ function Get-WinREImageLocation {
     return 
 }
 function Get-WinREStatus {
+    param(
+        # Returns the real status even if -WhatIf simulated an earlier enable or disable
+        [switch]$IgnorePreview
+    )
     Write-Log -Message 'Retrieving current WinRE status' -Component 'WinREStatus'
+    if ($Script:PreviewMode -and -not($IgnorePreview) -and $null -ne $Script:PreviewWinREStatus) {
+        Write-Log -Message "Recovery Agent is $(if ($Script:PreviewWinREStatus) { 'enabled' } else { 'disabled' }) (simulated by -WhatIf)" -Component 'WinREStatus'
+        return $Script:PreviewWinREStatus
+    }
     $WinreStatus = reagentc /info
     $RecoveryPartitionStatus = $WinreStatus.split("`n")[3].split(' ')[-1]
     if ($LASTEXITCODE -eq 5) {
@@ -349,6 +392,13 @@ function Get-WinREStatus {
     return $Status
 }
 function Disable-WinRE {
+    $Decision = Confirm-PatchStep -Target 'Windows Recovery Environment' -Action 'Disable WinRE (ReAgentC /disable)'
+    if ($Decision -eq 'Preview') {
+        $Script:PreviewWinREStatus = $false
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
     $DisableRE = ReAgentc.exe /disable
     #Regex will check if the message contains an error number. Errors will cause reagentc to throw and not return anything
     #Exitcode 2 = Already disabled
@@ -362,6 +412,13 @@ function Disable-WinRE {
     }
 }
 function Enable-WinRE {
+    $Decision = Confirm-PatchStep -Target 'Windows Recovery Environment' -Action 'Enable WinRE (ReAgentC /enable)'
+    if ($Decision -eq 'Preview') {
+        $Script:PreviewWinREStatus = $true
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
     $EnableRE = ReAgentc.exe /enable
     if ($LASTEXITCODE -eq 0 -and ($EnableRE[0] -notmatch ".*\d+.*")) {
         Write-Log -Message 'Enabled WinRE' -Component 'EnableWinRE'
@@ -374,7 +431,7 @@ function Enable-WinRE {
 }
 function Mount-WinRE {
     if (-not(Test-Path $MountDirectory)) {
-        New-Item $MountDirectory -ItemType Directory
+        New-Item $MountDirectory -ItemType Directory -Confirm:$false | Out-Null
     } else {
         Write-Log -Message 'Directory already exists - verifying its empty' -Component 'MountWinRE'
         $MountDirectoryEmpty = Get-ChildItem $MountDirectory 
@@ -396,6 +453,12 @@ function Mount-WinRE {
             Write-Log -Message 'Recovery Agent enabled to mount the image' -Component 'MountWinRE'
         }
     }
+    $Decision = Confirm-PatchStep -Target $MountDirectory -Action 'Mount WinRE image (ReAgentC /mountre)'
+    if ($Decision -eq 'Preview') {
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
     $Mount = ReAgentC.exe /mountre /path $MountDirectory
     if ($Mount) {
         if ($Mount[0] -notmatch ".*\d+.*" -and (Get-WindowsImage -Mounted).count -ge 1 -and $LASTEXITCODE -eq 0) {
@@ -407,7 +470,7 @@ function Mount-WinRE {
         Write-Log -Message "$Mount" -Component 'MountWinRE'
         Write-Log -Message "Trying to copy the reagentc.log to the log folder" -Component 'MountWinRE'
         $ReagentCLog = Join-Path -Path $LogDirectory -ChildPath ("ReAgentC_$DateTime.log")
-        Copy-Item -Path "$env:SystemDrive\Windows\Logs\ReAgent\ReAgent.log" -Destination $ReagentCLog
+        Copy-Item -Path "$env:SystemDrive\Windows\Logs\ReAgent\ReAgent.log" -Destination $ReagentCLog -Confirm:$false
         return $false
     }
 }
@@ -421,6 +484,24 @@ function Dismount-WinRE {
         LogLevel = 'WarningsInfo'
     }
     $ResetBaseLogFile = Join-Path -Path $LogDirectory -ChildPath ('ResetBase_{0}.log' -f $DateTime)
+    if ($Discard) {
+        $DismountAction = 'Discard all changes and unmount WinRE image (DISM cleanup, ReAgentC /unmountre /discard)'
+    } else {
+        $DismountAction = 'Clean up, commit changes and unmount WinRE image (DISM /StartComponentCleanup /ResetBase, ReAgentC /unmountre /commit)'
+    }
+    $Decision = Confirm-PatchStep -Target $MountDirectory -Action $DismountAction
+    if ($Decision -eq 'Declined') {
+        Write-Log -Message "Unmounting was declined - the image is still mounted at $MountDirectory" -Component 'DismountWinRE' -Type 3
+        return $false
+    } elseif ($Decision -eq 'Preview') {
+        if ($Discard) {
+            return $false
+        }
+        [void](Confirm-PatchStep -Target $MountDirectory -Action 'Remove mount directory')
+        Write-Log -Message 'Disabling WinRE, otherwise BitLocker will complain. Will re-enable at the end' -Component 'DismountWinRE' -Type 2
+        [void](Disable-WinRE)
+        return $true
+    }
     Write-Log -Message 'Cleanup before dismount (shrink image to only required size)' -Component 'DismountWinRE'
     dism /image:$MountDirectory /cleanup-image /StartComponentCleanup /ResetBase /LogPath:$ResetBaseLogFile /loglevel:3
     Write-Log -Message 'Cleanup done, verifying image status' -Component 'DismountWinRE'
@@ -455,7 +536,7 @@ function Dismount-WinRE {
         }   
     } elseif ($UnmountCommit[0] -notmatch ".*\d+.*") {
         Write-Log -Message 'WinRE commited changes successfully - cleaning up temporary folder' -Component 'DismountWinRE'
-        Remove-Item $MountDirectory -Force -Recurse
+        Remove-Item $MountDirectory -Force -Recurse -Confirm:$false
         Write-Log -Message 'Disabling WinRE, otherwise BitLocker will complain. Will re-enable at the end' -Component 'DismountWinRE' -Type 2
         if (-not(Disable-WinRE)) {
             Write-Log -Message 'Disabling WinRE failed - this means BitLocker will require the recovery key next reboot' -Component 'DismountWinRE' -Type 3
@@ -472,7 +553,7 @@ function Backup-ReAgentXML {
     $ReAgentXMLLocation = "$env:SYSTEMROOT\System32\Recovery\ReAgent.xml"
     if (Test-Path $ReAgentXMLLocation) {
         $ToBackupHash = Get-FileHash -LiteralPath $ReAgentXMLLocation -Algorithm SHA256
-        $XMLBackups = Get-ChildItem (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.xml -Force
+        $XMLBackups = Get-ChildItem (Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.xml -Force -ErrorAction SilentlyContinue
         if ($XMLBackups.count -ge 1) {
             foreach ($Backup in $XMLBackups) {
                 $BackedFile = Get-FileHash $Backup.FullName -Algorithm SHA256
@@ -485,7 +566,13 @@ function Backup-ReAgentXML {
         if (-not($XMLBackupFound)) {
             $XMLBackupFileName = ('ReAgent{0}.xml' -f $Script:DateTime)
             $XMLBackupFilePath = Join-Path $BackupDirectory -ChildPath $XMLBackupFileName
-            Copy-Item $ReAgentXMLLocation $XMLBackupFilePath -Force
+            $Decision = Confirm-PatchStep -Target $XMLBackupFilePath -Action "Back up $ReAgentXMLLocation"
+            if ($Decision -eq 'Preview') {
+                return $true
+            } elseif ($Decision -eq 'Declined') {
+                return $false
+            }
+            Copy-Item $ReAgentXMLLocation $XMLBackupFilePath -Force -Confirm:$false
             $XMLBackupSuccessful = (Get-FileHash $XMLBackupFilePath -Algorithm SHA256).Hash -eq $ToBackupHash.Hash
         }
         if (-not($XMLBackupSuccessful) -and -not($XMLBackupFound)) {
@@ -516,6 +603,12 @@ function Update-ReAgentXML {
         return $false
     }
     $ReAgentXMLLocation = "$env:SYSTEMROOT\System32\Recovery\ReAgent.xml"
+    $Decision = Confirm-PatchStep -Target $ReAgentXMLLocation -Action 'Reset ImageLocation to default'
+    if ($Decision -eq 'Preview') {
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
     [xml]$RecoveryAgentXML = [System.IO.File]::ReadAllText($ReAgentXMLLocation)
     $RecoveryAgentXML.WindowsRE.ImageLocation.path = ''
     $RecoveryAgentXML.WindowsRE.ImageLocation.id = '0'
@@ -549,6 +642,12 @@ function Add-WinREPackage {
         LogLevel    = 'WarningsInfo'
     }
     Write-Log -Message "Analysing Package $PackagePath" -Component 'AddWinREPackage'
+    $Decision = Confirm-PatchStep -Target $MountDirectory -Action "Add package $PackagePath (Add-WindowsPackage)"
+    if ($Decision -eq 'Preview') {
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
     if ($SSU) {
         $PackagePathBuildNumber = $PackagePath.Fullname.split("-")[1]
         $AddWindowsPackageLogFile = Join-Path -Path $LogDirectory -ChildPath ('Analyseusing-Get-WindowsPackage_{0}.log' -f $DateTime)
@@ -624,7 +723,7 @@ function Backup-WinRE {
     $ToBackupHash = Get-FileHash -LiteralPath $WinRELocationFromReAgentXML -Algorithm MD5
     $BackupFileName = ('WinRE{0}.wim' -f $Script:DateTime)
     if (-not(Test-Path $BackupDirectory)) {
-        New-Item $BackupDirectory -ItemType Directory -Force
+        New-Item $BackupDirectory -ItemType Directory -Force -Confirm:$false | Out-Null
     } else {
         Write-Log -Message 'Backup folder already exists' -Component 'BackupWinRE'
         Write-Log -Message 'Checking if the current WinRE is already backed' -Component 'BackupWinRE'
@@ -642,7 +741,13 @@ function Backup-WinRE {
     }
     $TargetFile = Join-Path $BackupDirectory -ChildPath $BackupFileName
     Write-Log -Message "Moving $WinRELocationFromReAgentXML to $BackupDirectory and name $BackupFileName" -Component 'BackupWinRE'
-    Copy-Item -LiteralPath $WinRELocationFromReAgentXML -Destination $TargetFile -Force
+    $Decision = Confirm-PatchStep -Target $TargetFile -Action "Back up $WinRELocationFromReAgentXML"
+    if ($Decision -eq 'Preview') {
+        return $true
+    } elseif ($Decision -eq 'Declined') {
+        return $false
+    }
+    Copy-Item -LiteralPath $WinRELocationFromReAgentXML -Destination $TargetFile -Force -Confirm:$false
     if (Test-Path -LiteralPath $TargetFile) {
         Write-Log -Message 'Verify backup hash matches actual' -Component 'BackupWinRE'
         $BackupSuccessful = (Get-FileHash -LiteralPath $TargetFile -Algorithm MD5).Hash -eq $ToBackupHash.Hash
@@ -661,7 +766,7 @@ function Update-RecoveryPartitionInformation {
         Detecting the recovery partition can be difficult depening on how the machine was set up. 
         This function will try multiple methods to discover the correct partition.
     #>
-    $WinREStatus = Get-WinREStatus
+    $WinREStatus = Get-WinREStatus -IgnorePreview
     if ($WinREStatus) {
         $Script:ReAgentCCurrentInfo = ReAgentc.exe /info
         $Script:ReAgentCCurrentDrive = $Script:ReAgentCCurrentInfo.split("`n")[4].Substring(31, $Script:ReAgentCCurrentInfo.split("`n")[4].length - 31).trim()
@@ -913,6 +1018,27 @@ function Format-WinREPartition {
                 } else {
                     $NewSystemDriveSize = $WindowsPartitionSize.SizeMax - $RecoveryDriveNewSize + $Script:RecoveryPartition.Size
                 }
+                $PartitionActions = [System.Collections.Generic.List[string]]::new()
+                if (-not($CreateWinREDrive)) {
+                    $PartitionActions.Add("remove recovery partition $($Script:RecoveryPartition.PartitionNumber)")
+                }
+                if ($RepartitionMode) {
+                    $PartitionActions.Add('keep its space as an empty hidden partition')
+                }
+                $PartitionActions.Add(('shrink {0}: to {1:N2} GB' -f $DriveToShrink, ($NewSystemDriveSize / 1GB)))
+                $PartitionActions.Add(('create a {0:N2} GB recovery partition (diskpart)' -f ($RecoveryDriveNewSize / 1GB)))
+                $PartitionDiskNumber = (Get-Partition -DriveLetter $DriveToShrink).DiskNumber
+                $Decision = Confirm-PatchStep -Target "Disk $PartitionDiskNumber" -Action ($PartitionActions -join ', ')
+                if ($Decision -eq 'Preview') {
+                    if ($ReplaceWIM) {
+                        return $true
+                    }
+                    return (Enable-WinRE)
+                } elseif ($Decision -eq 'Declined') {
+                    Write-Log -Message 'Partition changes were declined - no changes were performed to the partitions, re-enabling WinRE' -Component 'FormatWinREPartition' -Type 2
+                    [void](Enable-WinRE)
+                    return $false
+                }
                 if (-not($CreateWinREDrive)) {
                     #The following additional check is to make very sure, that the the recovery agent is disabled before we REMOVE the recovery partition
                     $DisableReAgentC = (Get-Volume -Partition $Script:RecoveryPartition).SizeRemaining
@@ -929,7 +1055,7 @@ function Format-WinREPartition {
                 $Script:RecoveryPartition = $false
                 Write-Log -Message 'Shrinking C: and re-creating recovery partition' -Component 'FormatWinREPartition'
                 try {
-                    Resize-Partition -DriveLetter $DriveToShrink -Size $NewSystemDriveSize -ErrorAction Stop
+                    Resize-Partition -DriveLetter $DriveToShrink -Size $NewSystemDriveSize -ErrorAction Stop -Confirm:$false
                 } catch {
                     Write-Log -Message "$($error[0].Exception.Message)" -Component 'FormatWinREPartition' -Type 3
                     Write-Log -Message "Unrecoverable error occured - this could mean there is a partition in the way to shrink the system partition" -Component 'FormatWinREPartition' 
@@ -942,11 +1068,11 @@ create partition primary id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
 gpt attributes=0x8000000000000001
 format quick fs=ntfs label='Recovery'
 "@
-                if (Test-Path -Path '.\diskpart.txt') { Get-Item -Path '.\diskpart.txt' | Remove-Item -Force }
-                if (Test-Path -Path '.\diskpart.log') { Get-Item -Path '.\diskpart.log' | Remove-Item -Force }
-                Add-Content -Path '.\diskpart.txt' -Value $Diskpart
+                if (Test-Path -Path '.\diskpart.txt') { Get-Item -Path '.\diskpart.txt' | Remove-Item -Force -Confirm:$false }
+                if (Test-Path -Path '.\diskpart.log') { Get-Item -Path '.\diskpart.log' | Remove-Item -Force -Confirm:$false }
+                Add-Content -Path '.\diskpart.txt' -Value $Diskpart -Confirm:$false
                 diskpart /s '.\diskpart.txt' > '.\diskpart.log'
-                Move-Item -Path '.\diskpart.log' -Destination $LogDirectory -Force
+                Move-Item -Path '.\diskpart.log' -Destination $LogDirectory -Force -Confirm:$false
                 Confirm-WinREPrerequisites -CheckRecoveryPartitionPreStage
                 if ($Script:RecoveryPartition) {
                     Write-Log -Message 'Successfully created the recovery partition' -Component 'FormatWinREPartition'
@@ -954,7 +1080,7 @@ format quick fs=ntfs label='Recovery'
                     Write-Log -Message 'Failed to create the recovery partition, waiting 10 seconds, then retry once' -Component 'FormatWinREPartition' -Type 3
                     Start-Sleep -Seconds 10
                     diskpart /s '.\diskpart.txt' > '.\diskpart2.log'
-                    Move-Item -Path '.\diskpart2.log' -Destination $LogDirectory -Force
+                    Move-Item -Path '.\diskpart2.log' -Destination $LogDirectory -Force -Confirm:$false
                     Confirm-WinREPrerequisites -CheckRecoveryPartitionPreStage
                     if (-not($Script:RecoveryPartition)) {
                         Write-Log 'Finally failed to create recovery partition - giving up' -Component 'FormatWinREPartition' -Type 3
@@ -964,7 +1090,7 @@ format quick fs=ntfs label='Recovery'
                     }
                 }
                 $DiskpartStatus = (Get-Volume -Partition (Get-Partition -DiskNumber $Script:RecoveryPartition.DiskNumber -PartitionNumber $Script:RecoveryPartition.PartitionNumber)).OperationalStatus -eq "OK"
-                Get-Item '.\diskpart.txt' | Remove-Item -Force
+                Get-Item '.\diskpart.txt' | Remove-Item -Force -Confirm:$false
                 if ($DiskpartStatus) {
                     Write-Log -Message 'Recovery partition recreated. Define recovery partition using GPTType' -Component 'FormatWinREPartition'
                     #The following line will be left here for legacy purposes. It should not be required to seperate the GptType assignment and partition creation anymore.
@@ -1045,12 +1171,18 @@ function Add-DriverToWinRE {
         Write-Log -Message 'WinRE could not be mounted to apply drivers ' -Component 'PatchWinRE' -Type 3
         return $false
     }
-    if ($Drivers) {
-        Write-Log -Message "Adding drivers from folder $Drivers" -Component 'PatchWinRE'
-        Add-WindowsDriver -Driver $Drivers -Recurse @AddDriverCommonParams
-    } elseif ($SingleDriver) {
-        Write-Log -Message "Adding driver $SingleDriver" -Component 'PatchWinRE'
-        Add-WindowsDriver -Driver $SingleDriver @AddDriverCommonParams
+    $Decision = Confirm-PatchStep -Target $MountDirectory -Action "Add driver(s) $(if ($Drivers) { $Drivers } else { $SingleDriver }) (Add-WindowsDriver)"
+    if ($Decision -eq 'Run') {
+        if ($Drivers) {
+            Write-Log -Message "Adding drivers from folder $Drivers" -Component 'PatchWinRE'
+            Add-WindowsDriver -Driver $Drivers -Recurse @AddDriverCommonParams
+        } elseif ($SingleDriver) {
+            Write-Log -Message "Adding driver $SingleDriver" -Component 'PatchWinRE'
+            Add-WindowsDriver -Driver $SingleDriver @AddDriverCommonParams
+        }
+    } elseif ($Decision -eq 'Declined') {
+        [void](Dismount-WinRE -Discard)
+        return $false
     }
     Write-Log -Message 'Added drivers, trying to unmount and apply' -Component 'PatchWinRE'
     if (-not(Dismount-WinRE)) {
@@ -1086,14 +1218,18 @@ function Add-PatchesToWinRE {
         }
     }
     if ($GDRDUorLCU) {
-        $CurrentWinREPath = "\\?" + (ReAgentc.exe /info | Select-String -SimpleMatch "\\?\GLOBALROOT\device").ToString().split("?")[1] + "\WinRE.wim"
-        $CurrenWinREBuild = (Get-WindowsImage -ImagePath $CurrentWinREPath -Index 1).SPBuild
-        Write-Log -Message "Current Patchversion of mounted WinRE: $CurrenWinREBuild"
-        $Windows10 = ([System.Environment]::OSVersion.Version.Build -ge 19042 -and [System.Environment]::OSVersion.Version.Build -lt 22000) 
-        if ($Windows10 -and -not($SSU)) {
-            Write-Log -Message "Windows 10 machine detected: Please be aware, that this script doesn't check if the SSU has been applied to the WinRE before patching. Rename the SSU to start with '1_'. You will want to check for KB5014032" -Component 'PatchWinRE' -Type 2
+        try {
+            $CurrentWinREPath = "\\?" + (ReAgentc.exe /info | Select-String -SimpleMatch "\\?\GLOBALROOT\device").ToString().split("?")[1] + "\WinRE.wim"
+            $CurrenWinREBuild = (Get-WindowsImage -ImagePath $CurrentWinREPath -Index 1).SPBuild
+            Write-Log -Message "Current Patchversion of mounted WinRE: $CurrenWinREBuild"
+        } catch {
+            Write-Log -Message "Could not read the current patch version of WinRE: $($_.Exception.Message)" -Component 'AddPatchesToWinRE' -Type 2
         }
+        $Windows10 = ([System.Environment]::OSVersion.Version.Build -ge 19042 -and [System.Environment]::OSVersion.Version.Build -lt 22000) 
         $SSU = $Files | Where-Object { $_.Name -like 'ssu*' }
+        if ($Windows10 -and -not($SSU)) {
+            Write-Log -Message "Windows 10 machine detected: Please be aware, that this script doesn't check if the SSU has been applied to the WinRE before patching. Rename the SSU to start with 'ssu' to apply it first. You will want to check for KB5014032" -Component 'PatchWinRE' -Type 2
+        }
     }
     if ($SingleFile) {
         $Files = Get-Item $SingleFile
@@ -1126,7 +1262,7 @@ function Add-PatchesToWinRE {
         Write-Log -Message 'Some patches could not be applied - please check the log!' -Component 'AddPatchesToWinRE' -Type 3
         if ($AbortIfFailed) {
             Write-Log -Message 'Discard changes, because AbortIfFailed is set' -Component 'AddPatchesToWinRE' -Type 3
-            Dismount-WinRE -Discard
+            [void](Dismount-WinRE -Discard)
             return $false
         }
     }
@@ -1135,10 +1271,14 @@ function Add-PatchesToWinRE {
         Write-Log 'WinRE could not be dismounted, changes have been discarded' -Component 'AddPatchesToWinRE' -Type 3
         return $false
     }
-    if ($GDRDUorLCU) {
-        $NewWinREPath = "\\?" + (ReAgentc.exe /info | Select-String -SimpleMatch "\\?\GLOBALROOT\device").ToString().split("?")[1] + "\WinRE.wim"
-        $NewWinREBuild = (Get-WindowsImage -ImagePath $NewWinREPath -Index 1).SPBuild
-        Write-Log -Message "Current Patchversion of mounted WinRE: $NewWinREBuild"
+    if ($GDRDUorLCU -and -not($Script:PreviewMode)) {
+        try {
+            $NewWinREPath = "\\?" + (ReAgentc.exe /info | Select-String -SimpleMatch "\\?\GLOBALROOT\device").ToString().split("?")[1] + "\WinRE.wim"
+            $NewWinREBuild = (Get-WindowsImage -ImagePath $NewWinREPath -Index 1).SPBuild
+            Write-Log -Message "Current Patchversion of mounted WinRE: $NewWinREBuild"
+        } catch {
+            Write-Log -Message 'Could not read the new patch version of WinRE while the recovery agent is disabled - it will be re-enabled at the end' -Component 'AddPatchesToWinRE'
+        }
     }
     Write-Log -Message 'Applying finished' -Component 'AddPatchesToWinRE'
     return $true
@@ -1168,34 +1308,39 @@ function Edit-WIM {
     }
     $WIMTargetPath = "$env:SYSTEMROOT\System32\Recovery\WinRE.wim"
     $WIMSourceFileHash = Get-FileHash -Path $Script:WinREReplacementImagePath -Algorithm SHA256
-    if (Test-Path $WIMTargetPath) {
-        Write-Log -Message "Current WinRE.wim found at $WIMTargetPath" -Component 'EditWIM'
-        $FileAttributes = (Get-Item -Path $WIMTargetPath -Force).Attributes
-        Remove-Item -Path $WIMTargetPath -Force
-    } else {
-        Write-Log -Message "No existing WinRE.wim found at $WIMTargetPath - proceeding with default FileAttributes" -Component 'EditWIM' -Type 2
-        $FileAttributes = [System.IO.FileAttributes]::Hidden, [System.IO.FileAttributes]::System, [System.IO.FileAttributes]::Archive, [System.IO.FileAttributes]::NotContentIndexed
-    }
-    Copy-Item -Path $Script:WinREReplacementImagePath -Destination $WIMTargetPath -Force
-    if (-not(Test-Path -Path $WIMTargetPath)) {
-        Write-Log -Message 'The provided WIM file could not be copied to the target location' -Component 'EditWIM' -Type 3
+    $Decision = Confirm-PatchStep -Target $WIMTargetPath -Action "Replace with $($Script:WinREReplacementImagePath)"
+    if ($Decision -eq 'Declined') {
         return $false
-    } else {
-        Write-Log -Message 'The provided WIM file was successfully copied to the target location' -Component 'EditWIM'
-        Write-Log -Message 'Use File Attributes from previous file' -Component 'EditWIM'
-        $WIMTargetFileHash = Get-FileHash -Path $WIMTargetPath -Algorithm SHA256
-        $CurrentFileAttributes = (Get-Item -Path $WIMTargetPath -Force).Attributes
-        foreach ($Attribute in $FileAttributes.ToString().Split(', ')) {
-            if ($CurrentFileAttributes -contains [System.IO.FileAttributes]::$Attribute) {
-                continue
-            } else {
-                (Get-Item -Path $WIMTargetPath -Force).Attributes += [System.IO.FileAttributes]::$Attribute
+    } elseif ($Decision -eq 'Run') {
+        if (Test-Path $WIMTargetPath) {
+            Write-Log -Message "Current WinRE.wim found at $WIMTargetPath" -Component 'EditWIM'
+            $FileAttributes = (Get-Item -Path $WIMTargetPath -Force).Attributes
+            Remove-Item -Path $WIMTargetPath -Force -Confirm:$false
+        } else {
+            Write-Log -Message "No existing WinRE.wim found at $WIMTargetPath - proceeding with default FileAttributes" -Component 'EditWIM' -Type 2
+            $FileAttributes = [System.IO.FileAttributes]::Hidden, [System.IO.FileAttributes]::System, [System.IO.FileAttributes]::Archive, [System.IO.FileAttributes]::NotContentIndexed
+        }
+        Copy-Item -Path $Script:WinREReplacementImagePath -Destination $WIMTargetPath -Force -Confirm:$false
+        if (-not(Test-Path -Path $WIMTargetPath)) {
+            Write-Log -Message 'The provided WIM file could not be copied to the target location' -Component 'EditWIM' -Type 3
+            return $false
+        } else {
+            Write-Log -Message 'The provided WIM file was successfully copied to the target location' -Component 'EditWIM'
+            Write-Log -Message 'Use File Attributes from previous file' -Component 'EditWIM'
+            $WIMTargetFileHash = Get-FileHash -Path $WIMTargetPath -Algorithm SHA256
+            $CurrentFileAttributes = (Get-Item -Path $WIMTargetPath -Force).Attributes
+            foreach ($Attribute in $FileAttributes.ToString().Split(', ')) {
+                if ($CurrentFileAttributes -contains [System.IO.FileAttributes]::$Attribute) {
+                    continue
+                } else {
+                    (Get-Item -Path $WIMTargetPath -Force).Attributes += [System.IO.FileAttributes]::$Attribute
+                }
             }
         }
-    }
-    if ($WIMTargetFileHash -and ($WIMSourceFileHash.Hash -ne $WIMTargetFileHash.Hash)) {
-        Write-Log -Message "Hash mismatch! Failed to replace provided WIM file" -Component 'EditWIM' -Type 3
-        return $false
+        if ($WIMTargetFileHash -and ($WIMSourceFileHash.Hash -ne $WIMTargetFileHash.Hash)) {
+            Write-Log -Message "Hash mismatch! Failed to replace provided WIM file" -Component 'EditWIM' -Type 3
+            return $false
+        }
     }
     Write-Log -Message "Successfully put $($Script:WinREReplacementImagePath) in place, reset ReAgent.xml" -Component 'EditWIM'
     $ReAgentXMLLocation = "$env:SYSTEMROOT\Windows\System32\Recovery\ReAgent.xml"
@@ -1204,8 +1349,13 @@ function Edit-WIM {
             Write-Log -Message 'ReAgent.xml could not be successfully backed up - no modifications were done' -Component 'EditWIM'
             return $false
         }
-        Remove-Item -Path $ReAgentXMLLocation -Force
-        Write-Log -Message "Successfully reset ReAgent.xml" -Component 'EditWIM'
+        $Decision = Confirm-PatchStep -Target $ReAgentXMLLocation -Action 'Remove to reset the recovery agent configuration'
+        if ($Decision -eq 'Declined') {
+            return $false
+        } elseif ($Decision -eq 'Run') {
+            Remove-Item -Path $ReAgentXMLLocation -Force -Confirm:$false
+            Write-Log -Message "Successfully reset ReAgent.xml" -Component 'EditWIM'
+        }
     }
     if ($WinREStatus) {
         Write-Log -Message "WinRE was already enabled when this function was run, re-enabling it now" -Component 'EditWIM'
@@ -1215,8 +1365,8 @@ function Edit-WIM {
             $RecoveryWinREImageHash = Get-FileHash -Path $RecoveryWinREImagePath -Algorithm SHA256
             $RecoveryAgentXMLBackup = (Get-ChildItem -Path $BackupDirectory -Filter "ReAgent.xml" | Sort-Object -Property LastAccessTime -Top 1).FullName
             $RecoveryAgentXMLBackupHash = Get-FileHash -Path $RecoveryAgentXMLBackup -Algorithm SHA256
-            Copy-Item -Path $RecoveryAgentXMLBackup -Destination $ReAgentXMLLocation -Force
-            Copy-Item -Path $RecoveryWinREImagePath -Destination $WIMTargetPath -Force
+            Copy-Item -Path $RecoveryAgentXMLBackup -Destination $ReAgentXMLLocation -Force -Confirm:$false
+            Copy-Item -Path $RecoveryWinREImagePath -Destination $WIMTargetPath -Force -Confirm:$false
             $WIMTargetFileHash = Get-FileHash -Path $WIMTargetPath -Algorithm SHA256
             $RecoveryAgentXMLFileHash = Get-FileHash -Path $ReAgentXMLLocation -Algorithm SHA256
             if ($WIMTargetFileHash -ne $RecoveryWinREImageHash) {
@@ -1237,6 +1387,19 @@ function Edit-WIM {
     return $true
 }
 # Start Coding!
+$Script:PatchCmdlet = $PSCmdlet
+$Script:PreviewMode = [bool]$WhatIfPreference
+$Script:PreviewWinREStatus = $null
+if ($Script:PreviewMode) {
+    # Module autoload under -WhatIf prints alias creation noise when run with powershell.exe -File
+    $OriginalWhatIfPreference = $WhatIfPreference
+    try {
+        $WhatIfPreference = $false
+        Import-Module Dism, Storage -ErrorAction SilentlyContinue
+    } finally {
+        $WhatIfPreference = $OriginalWhatIfPreference
+    }
+}
 Initialize-Script
 Write-Log -Message "Patch-WinRE started at $(Get-Date)" -Component 'WinREPatchCore'
 if (-not(Confirm-WinREPrerequisites -InitialRun) -and -not($ReportOnly)) {
@@ -1379,7 +1542,11 @@ if ($PatchFilesDUorSOS) {
 if ($DeleteBackups) {
     if ($BackupDirectory) {
         Write-Log -Message "Deleting all backups of WinRE wims in $BackupDirectory"
-        Get-ChildItem $(Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.wim, *.xml -Force | ForEach-Object { if ($_) { Remove-Item -Path $_.FullName -Force } }
+        Get-ChildItem $(Join-Path -Path $BackupDirectory -ChildPath '*') -Include *.wim, *.xml -Force -ErrorAction SilentlyContinue | ForEach-Object {
+            if ($_ -and (Confirm-PatchStep -Target $_.FullName -Action 'Delete backup') -eq 'Run') {
+                Remove-Item -Path $_.FullName -Force -Confirm:$false
+            }
+        }
     } else {
         Write-Log -Message "Can't delete backups if no folder is specified" -Component 'WinREPatchCore' -Type 2
     }
@@ -1394,7 +1561,9 @@ if (-not(Get-WinREStatus)) {
         Exit 1
     }
 }
-if (-not($CreateWinREDrive)) {
+if ($Script:PreviewMode) {
+    Write-Log -Message 'Preview finished - no changes were applied' -Component 'WinREPatchCore'
+} elseif (-not($CreateWinREDrive)) {
     Write-Log -Message 'Customization finished, creating statistics' -Component 'WinREPatchCore'
     Get-Stats -Report
 }

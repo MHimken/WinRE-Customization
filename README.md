@@ -27,6 +27,43 @@ This can only be done in an automated fashion, if the disk:
 
 A description of each parameter comes with the script.
 
+## Graphical interface
+
+The Windows PowerShell 5.1 WPF interface is launched with:
+
+```powershell
+.\Start-PatchWinREGUI.ps1
+```
+
+When launched without elevation, the interface opens in command-generation mode. An elevated launch opens Run mode. To run it as an administrator, use an elevated PowerShell session or the **Restart as Administrator** button. Add `-GenerateOnly` to keep the interface in command-generation mode even when elevated:
+
+```powershell
+.\Start-PatchWinREGUI.ps1 -GenerateOnly
+```
+
+Keep `Start-PatchWinREGUI.ps1`, the `GUI` folder, and `Patch-WinRE.ps1` together. The interface supports these operations:
+
+- Back up and verify WinRE (the script's default operation)
+- Report the WinRE and recovery-partition state
+- Apply GDR-DU / LCU (`.msu` or `.cab`) and DU / SafeOS (`.cab`) updates
+- Add drivers from a folder containing `.inf` files or from one `.inf` file
+- Replace WinRE with a selected WIM file, or create a recovery partition with an optional WIM file
+
+Features on Demand is shown but disabled because the script does not implement it. The interface validates paths, package types and parameter combinations, shows the command before copying or running it, and can format generated commands as a one-liner, splatted invocation, or `-File` command. Run mode streams output and supports cancellation. The GUI log is saved beside the entry script by default; use `-LogPath` or `-LogFile` to choose another location. Use `-WhatIf` in the GUI to preview supported changes; the script still reads system state but does not apply changes guarded by `ShouldProcess`.
+
+**Check System** is available only in elevated Run mode. It performs read-only discovery of WinRE status, recovery-partition layout, available and shrinkable space, mounted images, and relevant file locations. Results marked **Review** or **Blocked** must be examined before running. A passing check is only a point-in-time assessment; it cannot guarantee that later disk or servicing operations will succeed.
+
+Review the backup and mount directories before running. If **Delete backups** is selected, the script removes every `.wim` and `.xml` file in the selected backup directory after a successful run, so use a dedicated directory containing only Patch-WinRE backups. The mount directory must be empty when an operation mounts WinRE.
+
+## Development checks
+
+The GUI tests require Pester 5 or later; the analyzer check requires PSScriptAnalyzer:
+
+```powershell
+.\Tests\Invoke-PatchWinRETests.ps1
+.\Tests\Invoke-PatchWinREAnalyzer.ps1
+```
+
 ## Adressing the script offered by Microsoft
 
 Microsoft released their own script officially on <https://support.microsoft.com/en-us/topic/kb5025175-updating-the-winre-partition-on-deployed-devices-to-address-security-vulnerabilities-in-cve-2022-41099-ba6621fa-5a9f-48f1-9ca3-e13eb56fb589>.

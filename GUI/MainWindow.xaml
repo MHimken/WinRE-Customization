@@ -1,0 +1,602 @@
+<!--
+    Main window of the Patch-WinRE GUI. Loaded by Start-PatchWinREGUI.ps1 with XamlReader.
+    Colours: JetBlack 242c31, Watermelon ea2c48, CarbonBlack 202626, Black 000000, Grey 737b80, CherryRose 9f2f45, text FFFFFF.
+    Lamp colours are semantic only. All brushes are dynamic resources, so high contrast mode can replace them with system colours.
+    Version: 1.0.0, Martin Himken, 2026-11-19
+-->
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="WinRE Customization - Patch-WinRE GUI"
+        Width="1280" Height="940" MinWidth="1100" MinHeight="760"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI" FontSize="13"
+        TextOptions.TextFormattingMode="Display" UseLayoutRounding="True" SnapsToDevicePixels="True">
+  <Window.Resources>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#202626"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#242c31"/>
+    <SolidColorBrush x:Key="FieldBrush" Color="#000000"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="LineBrush" Color="#737b80"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#737b80"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#ea2c48"/>
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#9f2f45"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="#FFFFFF"/>
+
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="14,7"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource TextBrush}"/></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Bd" Property="BorderThickness" Value="2"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Bd" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="SmallButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Padding" Value="8,1"/>
+      <Setter Property="FontSize" Value="11"/>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource FieldBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="SelectionBrush" Value="{DynamicResource PrimaryBrush}"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+              <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource TextBrush}"/></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Bd" Property="BorderThickness" Value="2"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Bd" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <StackPanel x:Name="Root" Orientation="Horizontal" Background="Transparent">
+              <Border x:Name="Box" Width="18" Height="18" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Background="{DynamicResource FieldBrush}" VerticalAlignment="Top" Margin="0,1,0,0">
+                <Path x:Name="Tick" Data="M3.5,9 L7.2,12.8 L14,4.5" Stroke="{DynamicResource PrimaryTextBrush}" StrokeThickness="2" Visibility="Collapsed"/>
+              </Border>
+              <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Top" RecognizesAccessKey="True"/>
+            </StackPanel>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource TextBrush}"/></Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Box" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource TextBrush}"/>
+                <Setter TargetName="Tick" Property="Visibility" Value="Visible"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Box" Property="BorderThickness" Value="2"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Root" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="RadioButton">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Margin" Value="0,0,16,0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <StackPanel x:Name="Root" Orientation="Horizontal" Background="Transparent">
+              <Grid Width="16" Height="16" VerticalAlignment="Center">
+                <Ellipse x:Name="Ring" Stroke="{DynamicResource LineBrush}" StrokeThickness="1" Fill="{DynamicResource FieldBrush}"/>
+                <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource TextBrush}" Visibility="Collapsed"/>
+              </Grid>
+              <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+            </StackPanel>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource TextBrush}"/></Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource PrimaryBrush}"/>
+                <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource TextBrush}"/>
+                <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource AccentBrush}"/><Setter TargetName="Ring" Property="StrokeThickness" Value="2"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Root" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+    <Style TargetType="ListBoxItem">
+      <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="ToolTipService.ShowOnDisabled" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Grid>
+              <Border x:Name="Bd" Background="Transparent" BorderThickness="5,0,0,0" BorderBrush="Transparent" Padding="14,8,12,8">
+                <ContentPresenter/>
+              </Border>
+              <Border x:Name="FocusBd" BorderThickness="1" BorderBrush="{DynamicResource TextBrush}" Visibility="Collapsed" Margin="5,1,1,1"/>
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource LineBrush}"/></Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceBrush}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="FocusBd" Property="Visibility" Value="Visible"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Bd" Property="Opacity" Value="0.55"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="SectionRule" TargetType="Border">
+      <Setter Property="Height" Value="1"/>
+      <Setter Property="Background" Value="{DynamicResource LineBrush}"/>
+      <Setter Property="Margin" Value="0,6,0,12"/>
+    </Style>
+    <Style x:Key="ParameterName" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Consolas"/>
+      <Setter Property="FontSize" Value="11.5"/>
+    </Style>
+    <Style x:Key="FieldMessage" TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap"/>
+      <Setter Property="Margin" Value="0,5,0,0"/>
+    </Style>
+    <Style x:Key="Chip" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="6,1"/>
+      <Setter Property="VerticalAlignment" Value="Bottom"/>
+    </Style>
+    <Style x:Key="ChipText" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="Lamp" TargetType="ContentControl">
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="20"/>
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="IsTabStop" Value="False"/>
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="56"/>
+      <RowDefinition Height="3*" MinHeight="240"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="2*" MinHeight="150"/>
+      <RowDefinition Height="30"/>
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Border Grid.Row="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1">
+      <Grid Margin="20,0,20,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Rectangle Width="6" Height="30" Fill="{DynamicResource AccentBrush}" Margin="0,0,12,0"/>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="WinRE Customization" FontSize="18" FontWeight="SemiBold"/>
+            <TextBlock x:Name="VersionText" FontSize="12" Text="Patch-WinRE.ps1"/>
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <ContentControl x:Name="ModeLamp" Style="{StaticResource Lamp}" Margin="0,0,10,0"/>
+          <TextBlock x:Name="ModeText" VerticalAlignment="Center" Margin="0,0,16,0" AutomationProperties.LiveSetting="Polite"/>
+          <Button x:Name="RestartButton" Style="{StaticResource PrimaryButton}" Content="Restart as _administrator" Visibility="Collapsed"
+                  ToolTip="Starts this window again with administrator rights. Run and Check System need them."
+                  AutomationProperties.HelpText="Starts this window again with administrator rights. Run and Check System need them."/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Body -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="300"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
+        <DockPanel>
+          <TextBlock x:Name="OperationListLabel" DockPanel.Dock="Top" Text="Choose an operation" Margin="19,16,12,8"/>
+          <ListBox x:Name="OperationList" AutomationProperties.LabeledBy="{Binding ElementName=OperationListLabel}"/>
+        </DockPanel>
+      </Border>
+
+      <ScrollViewer x:Name="SettingsScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <Grid x:Name="SettingsPanel" Margin="32,20,32,20">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <TextBlock x:Name="OperationTitle" Grid.Row="0" FontSize="22" FontWeight="SemiBold" Text="Backup and verify"/>
+          <TextBlock x:Name="OperationDescription" Grid.Row="1" TextWrapping="Wrap" Margin="0,6,0,18"/>
+          <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="36"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left column: sources, recovery partition, options -->
+            <StackPanel Grid.Column="0">
+              <StackPanel x:Name="SourceSection" Margin="0,0,0,14">
+                <TextBlock x:Name="SourceSectionTitle" Style="{StaticResource SectionTitle}" Text="Update files"/>
+                <Border Style="{StaticResource SectionRule}"/>
+
+                <Grid x:Name="SourceRow" Margin="0,0,0,12">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="34"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <StackPanel Grid.ColumnSpan="5" Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock x:Name="SourceLabel" Text="CAB / MSU file or folder"/>
+                    <TextBlock x:Name="SourceParameterText" Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-PatchFilesGDRDUorLCU"/>
+                  </StackPanel>
+                  <TextBox x:Name="SourceBox" Grid.Row="1" Grid.Column="0" AutomationProperties.LabeledBy="{Binding ElementName=SourceLabel}"/>
+                  <Button x:Name="SourceFolderButton" Grid.Row="1" Grid.Column="2" Content="Folder..." ToolTip="Select a folder with the files"/>
+                  <Button x:Name="SourceFileButton" Grid.Row="1" Grid.Column="4" Content="File..." ToolTip="Select a single file"/>
+                  <ContentControl x:Name="SourceLamp" Grid.Row="1" Grid.Column="5" Style="{StaticResource Lamp}"/>
+                  <TextBlock x:Name="SourceMessage" Grid.Row="2" Grid.ColumnSpan="5" Style="{StaticResource FieldMessage}"/>
+                </Grid>
+
+                <Grid x:Name="WimRow" Margin="0,0,0,12">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="34"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,0,0,5">
+                    <TextBlock x:Name="WimLabel" Text="WinRE image file (.wim)"/>
+                    <TextBlock Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-WIMFilePath"/>
+                  </StackPanel>
+                  <TextBox x:Name="WimBox" Grid.Row="1" Grid.Column="0" AutomationProperties.LabeledBy="{Binding ElementName=WimLabel}"/>
+                  <Button x:Name="WimFileButton" Grid.Row="1" Grid.Column="2" Content="File..." ToolTip="Select a .wim file"/>
+                  <ContentControl x:Name="WIMFilePathLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                  <TextBlock x:Name="WIMFilePathMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+                </Grid>
+              </StackPanel>
+
+              <StackPanel x:Name="SizeSection" Margin="0,0,0,14">
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Recovery partition"/>
+                <Border Style="{StaticResource SectionRule}"/>
+                <CheckBox x:Name="UseSizeCheck" AutomationProperties.Name="Set the recovery partition size (-RecoveryDriveSizeInGB)">
+                  <StackPanel>
+                    <TextBlock Text="Set the recovery partition size"/>
+                    <TextBlock Style="{StaticResource ParameterName}" Text="-RecoveryDriveSizeInGB"/>
+                  </StackPanel>
+                </CheckBox>
+                <Grid Margin="26,8,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="34"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <TextBox x:Name="SizeBox" Grid.Column="0" TextAlignment="Right" MaxLength="4" AutomationProperties.Name="Recovery partition size in GB"/>
+                  <TextBlock Grid.Column="1" Text="GB" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                  <ContentControl x:Name="RecoveryDriveSizeInGBLamp" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                  <TextBlock x:Name="RecoveryDriveSizeInGBMessage" Grid.Row="1" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+                </Grid>
+              </StackPanel>
+
+              <StackPanel x:Name="OptionsSection">
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Options"/>
+                <Border Style="{StaticResource SectionRule}"/>
+                <CheckBox x:Name="CreateWinREDriveCheck" Margin="0,0,0,10" AutomationProperties.Name="Create a recovery partition if none exists (-CreateWinREDrive)">
+                  <StackPanel>
+                    <TextBlock Text="Create a recovery partition if none exists"/>
+                    <TextBlock Style="{StaticResource ParameterName}" Text="-CreateWinREDrive"/>
+                  </StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="DoNotExpandCheck" Margin="0,0,0,10" AutomationProperties.Name="Do not expand the recovery partition (-DoNotExpandRecoveryPartition)">
+                  <StackPanel>
+                    <TextBlock Text="Do not expand the recovery partition"/>
+                    <TextBlock Style="{StaticResource ParameterName}" Text="-DoNotExpandRecoveryPartition"/>
+                  </StackPanel>
+                </CheckBox>
+                <CheckBox x:Name="AbortIfFailedCheck" Margin="0,0,0,10" AutomationProperties.Name="Discard all changes if an update fails (-AbortIfFailed)">
+                  <StackPanel>
+                    <TextBlock Text="Discard all changes if an update fails"/>
+                    <TextBlock Style="{StaticResource ParameterName}" Text="-AbortIfFailed"/>
+                  </StackPanel>
+                </CheckBox>
+                <Grid x:Name="DeleteBackupsRow" Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="34"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <CheckBox x:Name="DeleteBackupsCheck" AutomationProperties.Name="Delete old backups after the run (-DeleteBackups)">
+                    <StackPanel>
+                      <TextBlock Text="Delete old backups after the run"/>
+                      <TextBlock Style="{StaticResource ParameterName}" Text="-DeleteBackups"/>
+                    </StackPanel>
+                  </CheckBox>
+                  <ContentControl x:Name="DeleteBackupsLamp" Grid.Column="1" Style="{StaticResource Lamp}" VerticalAlignment="Top"/>
+                  <TextBlock x:Name="DeleteBackupsMessage" Grid.Row="1" Style="{StaticResource FieldMessage}" Margin="26,2,0,0"/>
+                </Grid>
+                <StackPanel Margin="0,0,0,10">
+                  <CheckBox x:Name="ToConsoleCheck" AutomationProperties.Name="Write the output to the console, no log file (-ToConsole)">
+                    <StackPanel>
+                      <TextBlock Text="Write the output to the console, no log file"/>
+                      <TextBlock Style="{StaticResource ParameterName}" Text="-ToConsole"/>
+                    </StackPanel>
+                  </CheckBox>
+                  <TextBlock x:Name="ToConsoleMessage" Style="{StaticResource FieldMessage}" Margin="26,2,0,0"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,0,10">
+                  <CheckBox x:Name="WhatIfCheck" AutomationProperties.Name="Preview changes (-WhatIf)">
+                    <StackPanel>
+                      <TextBlock Text="Preview changes (WhatIf)"/>
+                      <TextBlock Style="{StaticResource ParameterName}" Text="-WhatIf"/>
+                    </StackPanel>
+                  </CheckBox>
+                  <TextBlock x:Name="WhatIfMessage" Style="{StaticResource FieldMessage}" Margin="26,2,0,0"/>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Right column: folders -->
+            <StackPanel Grid.Column="2">
+              <TextBlock Style="{StaticResource SectionTitle}" Text="Folders (the root sets the defaults for the other four)"/>
+              <Border Style="{StaticResource SectionRule}"/>
+
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="92"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock x:Name="RootLabel" Text="Root folder" VerticalAlignment="Bottom" Margin="0,0,0,5"/>
+                <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                  <Button x:Name="RootResetButton" Style="{StaticResource SmallButton}" Content="Reset" Margin="0,0,6,0" ToolTip="Back to C:\WinRE-Customization\" AutomationProperties.Name="Reset root folder"/>
+                  <Border x:Name="RootChip" Style="{StaticResource Chip}"><TextBlock x:Name="RootChipText" Style="{StaticResource ChipText}" Text="ROOT"/></Border>
+                </StackPanel>
+                <TextBox x:Name="RootBox" Grid.Row="1" AutomationProperties.LabeledBy="{Binding ElementName=RootLabel}"/>
+                <Button x:Name="RootBrowseButton" Grid.Row="1" Grid.Column="2" Content="Browse..." AutomationProperties.Name="Browse root folder"/>
+                <ContentControl x:Name="RootLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                <TextBlock x:Name="RootMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+              </Grid>
+
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="92"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,5">
+                  <TextBlock x:Name="WorkingDirectoryLabel" Text="Working folder"/>
+                  <TextBlock Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-WorkingDirectory"/>
+                </StackPanel>
+                <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                  <Button x:Name="WorkingDirectoryResetButton" Style="{StaticResource SmallButton}" Content="Reset" Margin="0,0,6,0" ToolTip="Follow the root folder again" AutomationProperties.Name="Reset working folder to follow the root"/>
+                  <Border x:Name="WorkingDirectoryChip" Style="{StaticResource Chip}"><TextBlock x:Name="WorkingDirectoryChipText" Style="{StaticResource ChipText}" Text="FOLLOWS ROOT"/></Border>
+                </StackPanel>
+                <TextBox x:Name="WorkingDirectoryBox" Grid.Row="1" AutomationProperties.LabeledBy="{Binding ElementName=WorkingDirectoryLabel}"/>
+                <Button x:Name="WorkingDirectoryBrowseButton" Grid.Row="1" Grid.Column="2" Content="Browse..." AutomationProperties.Name="Browse working folder"/>
+                <ContentControl x:Name="WorkingDirectoryLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                <TextBlock x:Name="WorkingDirectoryMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+              </Grid>
+
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="92"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,5">
+                  <TextBlock x:Name="BackupDirectoryLabel" Text="Backup folder"/>
+                  <TextBlock Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-BackupDirectory"/>
+                </StackPanel>
+                <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                  <Button x:Name="BackupDirectoryResetButton" Style="{StaticResource SmallButton}" Content="Reset" Margin="0,0,6,0" ToolTip="Follow the root folder again" AutomationProperties.Name="Reset backup folder to follow the root"/>
+                  <Border x:Name="BackupDirectoryChip" Style="{StaticResource Chip}"><TextBlock x:Name="BackupDirectoryChipText" Style="{StaticResource ChipText}" Text="FOLLOWS ROOT"/></Border>
+                </StackPanel>
+                <TextBox x:Name="BackupDirectoryBox" Grid.Row="1" AutomationProperties.LabeledBy="{Binding ElementName=BackupDirectoryLabel}"/>
+                <Button x:Name="BackupDirectoryBrowseButton" Grid.Row="1" Grid.Column="2" Content="Browse..." AutomationProperties.Name="Browse backup folder"/>
+                <ContentControl x:Name="BackupDirectoryLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                <TextBlock x:Name="BackupDirectoryMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+              </Grid>
+
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="92"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,5">
+                  <TextBlock x:Name="MountDirectoryLabel" Text="Mount folder"/>
+                  <TextBlock Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-MountDirectory"/>
+                </StackPanel>
+                <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                  <Button x:Name="MountDirectoryResetButton" Style="{StaticResource SmallButton}" Content="Reset" Margin="0,0,6,0" ToolTip="Follow the root folder again" AutomationProperties.Name="Reset mount folder to follow the root"/>
+                  <Border x:Name="MountDirectoryChip" Style="{StaticResource Chip}"><TextBlock x:Name="MountDirectoryChipText" Style="{StaticResource ChipText}" Text="FOLLOWS ROOT"/></Border>
+                </StackPanel>
+                <TextBox x:Name="MountDirectoryBox" Grid.Row="1" AutomationProperties.LabeledBy="{Binding ElementName=MountDirectoryLabel}"/>
+                <Button x:Name="MountDirectoryBrowseButton" Grid.Row="1" Grid.Column="2" Content="Browse..." AutomationProperties.Name="Browse mount folder"/>
+                <ContentControl x:Name="MountDirectoryLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                <TextBlock x:Name="MountDirectoryMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+              </Grid>
+
+              <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="8"/><ColumnDefinition Width="92"/><ColumnDefinition Width="34"/></Grid.ColumnDefinitions>
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,5">
+                  <TextBlock x:Name="LogDirectoryLabel" Text="Log folder"/>
+                  <TextBlock Style="{StaticResource ParameterName}" Margin="8,1,0,0" VerticalAlignment="Center" Text="-LogDirectory"/>
+                </StackPanel>
+                <StackPanel Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,4">
+                  <Button x:Name="LogDirectoryResetButton" Style="{StaticResource SmallButton}" Content="Reset" Margin="0,0,6,0" ToolTip="Follow the root folder again" AutomationProperties.Name="Reset log folder to follow the root"/>
+                  <Border x:Name="LogDirectoryChip" Style="{StaticResource Chip}"><TextBlock x:Name="LogDirectoryChipText" Style="{StaticResource ChipText}" Text="FOLLOWS ROOT"/></Border>
+                </StackPanel>
+                <TextBox x:Name="LogDirectoryBox" Grid.Row="1" AutomationProperties.LabeledBy="{Binding ElementName=LogDirectoryLabel}"/>
+                <Button x:Name="LogDirectoryBrowseButton" Grid.Row="1" Grid.Column="2" Content="Browse..." AutomationProperties.Name="Browse log folder"/>
+                <ContentControl x:Name="LogDirectoryLamp" Grid.Row="1" Grid.Column="3" Style="{StaticResource Lamp}"/>
+                <TextBlock x:Name="LogDirectoryMessage" Grid.Row="2" Grid.ColumnSpan="3" Style="{StaticResource FieldMessage}"/>
+              </Grid>
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- Readiness, command and actions -->
+    <Border Grid.Row="2" Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,1">
+      <Grid Margin="20,14,20,14">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="280"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="16"/>
+          <ColumnDefinition Width="170"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Margin="0,0,20,0">
+          <TextBlock Text="Readiness" Margin="0,0,0,6"/>
+          <Border Background="{DynamicResource FieldBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" HorizontalAlignment="Left" Padding="10,8">
+            <StackPanel Orientation="Horizontal">
+              <ContentControl x:Name="ReadyLampPass" Style="{StaticResource Lamp}" Width="26" Height="26" Margin="0,0,10,0"/>
+              <ContentControl x:Name="ReadyLampReview" Style="{StaticResource Lamp}" Width="26" Height="26" Margin="0,0,10,0"/>
+              <ContentControl x:Name="ReadyLampBlocked" Style="{StaticResource Lamp}" Width="26" Height="26"/>
+            </StackPanel>
+          </Border>
+          <TextBlock x:Name="ReadyTitle" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,0" Text="READY" AutomationProperties.LiveSetting="Polite"/>
+          <TextBlock x:Name="ReadyDetail" TextWrapping="Wrap"/>
+        </StackPanel>
+        <Grid Grid.Column="1">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <DockPanel Margin="0,0,0,6" LastChildFill="False">
+            <TextBlock x:Name="CommandLabel" DockPanel.Dock="Left" Text="Command" Margin="0,0,20,0"/>
+            <CheckBox x:Name="ShowAllCheck" DockPanel.Dock="Right" Content="Show all _parameters" ToolTip="Also emit folders that match the script defaults"/>
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" AutomationProperties.Name="Command format">
+              <RadioButton x:Name="FormatOneLiner" GroupName="CommandFormat" Content="One-liner" IsChecked="True"/>
+              <RadioButton x:Name="FormatSplat" GroupName="CommandFormat" Content="Splat"/>
+              <RadioButton x:Name="FormatFile" GroupName="CommandFormat" Content="powershell.exe -File"/>
+            </StackPanel>
+          </DockPanel>
+          <TextBox x:Name="CommandBox" Grid.Row="1" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="13"
+                   MinHeight="66" MaxHeight="130" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                   AutomationProperties.LabeledBy="{Binding ElementName=CommandLabel}"/>
+          <TextBlock x:Name="CommandNote" Grid.Row="2" TextWrapping="Wrap" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
+        </Grid>
+        <StackPanel Grid.Column="3" VerticalAlignment="Top" Margin="0,22,0,0">
+          <Button x:Name="CopyButton" Content="_Copy command" Margin="0,0,0,8"/>
+          <Button x:Name="CheckSystemButton" Content="Check _System" Margin="0,0,0,8"/>
+          <Button x:Name="RunButton" Style="{StaticResource PrimaryButton}" Content="_Run"/>
+          <Button x:Name="CancelButton" Content="C_ancel run" Visibility="Collapsed"
+                  ToolTip="Stops the running process and all child processes"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Output -->
+    <Grid Grid.Row="3" Margin="20,10,20,12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+      <DockPanel Margin="0,0,0,6" LastChildFill="False">
+        <TextBlock x:Name="OutputLabel" DockPanel.Dock="Left" Text="Output" VerticalAlignment="Center"/>
+        <TextBlock x:Name="OutputTitle" DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"/>
+        <Button x:Name="SaveOutputButton" DockPanel.Dock="Right" Style="{StaticResource SmallButton}" Padding="10,3" Content="Sa_ve output..." Margin="14,0,0,0" IsEnabled="False"
+                ToolTip="Saves the output as a text file. -ToConsole writes no log file."/>
+        <TextBlock x:Name="ResultText" DockPanel.Dock="Right" FontWeight="SemiBold" VerticalAlignment="Center" Text="Nothing has been run yet." AutomationProperties.LiveSetting="Polite"/>
+        <ContentControl x:Name="ResultLamp" DockPanel.Dock="Right" Style="{StaticResource Lamp}" Margin="0,0,10,0"/>
+      </DockPanel>
+      <Grid Grid.Row="1">
+        <RichTextBox x:Name="OutputBox" IsReadOnly="True" Background="{DynamicResource FieldBrush}" Foreground="{DynamicResource TextBrush}"
+                     BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" Padding="6,6" FontFamily="Consolas" FontSize="12.5"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SelectionBrush="{DynamicResource PrimaryBrush}"
+                     AutomationProperties.LabeledBy="{Binding ElementName=OutputLabel}">
+          <FlowDocument PageWidth="4000"/>
+        </RichTextBox>
+        <TextBlock x:Name="OutputPlaceholder" Margin="14,11,14,0" FontFamily="Consolas" FontSize="12.5" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" IsHitTestVisible="False"
+                   Text="Output appears here after Run or Check System. Each line shows a level (INFO, NOTE, WARN, ERROR, PREVIEW), the script component and the message."/>
+      </Grid>
+    </Grid>
+
+    <!-- Legend -->
+    <Border Grid.Row="4" Background="{DynamicResource FieldBrush}">
+      <Grid Margin="20,0,20,0">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Foreground="{DynamicResource MutedBrush}" FontSize="12" Text="Legend" Margin="0,0,14,0"/>
+          <ContentControl x:Name="LegendLampPass" Style="{StaticResource Lamp}" Width="14" Height="14"/>
+          <TextBlock FontSize="12" Margin="6,0,18,0" Text="Valid"/>
+          <ContentControl x:Name="LegendLampReview" Style="{StaticResource Lamp}" Width="14" Height="14"/>
+          <TextBlock FontSize="12" Margin="6,0,18,0" Text="Review"/>
+          <ContentControl x:Name="LegendLampBlocked" Style="{StaticResource Lamp}" Width="14" Height="14"/>
+          <TextBlock FontSize="12" Margin="6,0,0,0" Text="Blocked"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <TextBlock x:Name="LogStatusText" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="450" Margin="0,0,12,0"/>
+          <TextBlock x:Name="LogFileText" VerticalAlignment="Center" FontSize="12" TextTrimming="CharacterEllipsis" MaxWidth="500" Visibility="Collapsed">
+            <Hyperlink x:Name="LogFileLink" Foreground="{DynamicResource MutedBrush}" AutomationProperties.Name="Open GUI log file"><Run x:Name="LogFileRun"/></Hyperlink>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

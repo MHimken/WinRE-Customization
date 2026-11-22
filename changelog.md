@@ -1,8 +1,23 @@
 # Changes
 
+## 22nd of November 2026 - Version 3.4.0 - GUI my WinRE
+
+- Add: Windows PowerShell 5.1 WPF interface for generating commands or running Patch-WinRE, with validation, streaming output, cancellation, and read-only system checks
+- Add: `-WhatIf` preview support with `ShouldProcess` prompts for changes
+- Add: GUI tests, parameter-set parity checks, and a PSScriptAnalyzer runner
+- Update: Corrected script help and examples
+
+## 28th of August 2026
+
+- Fix: Removed an accidental newline in `Patch-WinRE.ps1` ([c2368bc](https://github.com/MHimken/WinRE-Customization/commit/c2368bccc37262096ca477121f1e542f59a593c6))
+
 ## 5th of August 2026 - Version 3.3.2
 
 - Fix: Type mismatch in `Get-WinREImageLocation` where `$Script:RecoveryImagePathDisk` was assigned a disk object instead of an integer; renamed variable to `$Script:RecoveryImagePathDiskNumber` and removed erroneous `.DiskNumber` property call from `Confirm-WinREPrerequisites`
+
+## 14th of April 2026
+
+- Fix: Corrected additional backticks in `Patch-WinRE.ps1` ([5dd5ea3](https://github.com/MHimken/WinRE-Customization/commit/5dd5ea3b6ca2d06dfd222ac15197be94877949fd))
 
 ## 16th of November 2025 - Version 3.3.1
 
