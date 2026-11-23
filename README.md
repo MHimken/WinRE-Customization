@@ -17,6 +17,8 @@ As of 15.08.24 this script can be used to remidiate issues around the following 
 
 ## Prerequisites
 
+On 64-bit Windows, both the patch script and the GUI automatically relaunch in 64-bit Windows PowerShell when started from a 32-bit host. This keeps `reagentc.exe` and `System32\Recovery` in the native system directory. The relaunch does not elevate privileges.
+
 The script generally tries to detect states that it can not handle. Please consult the log (CMTrace compatible). If you encounter a scenario, that needs fixing please contact me or open an issue so I can investigate.
 
 **Attention**

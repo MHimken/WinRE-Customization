@@ -31,6 +31,11 @@ param(
     [string]$ScenarioFile
 )
 $ErrorActionPreference = 'Stop'
+# Install the mocks in the servicing process itself. Aliases do not survive a host relaunch.
+if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
+    & "$env:WINDIR\SysNative\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -File $PSCommandPath -ScriptPath $ScriptPath -ScenarioFile $ScenarioFile
+    exit $LASTEXITCODE
+}
 Add-Type -TypeDefinition @'
 public class PatchWinREMockMountedImage {
     public string MountStatus;

@@ -30,17 +30,24 @@ $Script:ScriptRoot = $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Script:ScriptRoot)) {
     $Script:ScriptRoot = Split-Path -Parent $PSCommandPath
 }
-if ($PSVersionTable.PSEdition -ne 'Desktop' -or
+$IsWow64 = [Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess
+if ($IsWow64 -or $PSVersionTable.PSEdition -ne 'Desktop' -or
     $PSVersionTable.PSVersion.Major -ne 5 -or
     [System.Threading.Thread]::CurrentThread.ApartmentState -ne [System.Threading.ApartmentState]::STA) {
-    $PowerShellPath = Join-Path -Path $env:SystemRoot -ChildPath 'System32\WindowsPowerShell\v1.0\powershell.exe'
-    $Arguments = '-NoProfile -STA -ExecutionPolicy Bypass -File "{0}"' -f $PSCommandPath
-    if ($GenerateOnly) { $Arguments += ' -GenerateOnly' }
-    if (-not [string]::IsNullOrWhiteSpace($LogPath)) { $Arguments += ' -LogPath "{0}"' -f $LogPath }
-    if (-not [string]::IsNullOrWhiteSpace($LogFile)) { $Arguments += ' -LogFile "{0}"' -f $LogFile }
-    $Process = Start-Process -FilePath $PowerShellPath -ArgumentList $Arguments -PassThru
-    $Process.WaitForExit()
-    exit $Process.ExitCode
+    $SystemFolder = if ($IsWow64) { 'SysNative' } else { 'System32' }
+    $PowerShellPath = "$env:WINDIR\$SystemFolder\WindowsPowerShell\v1.0\powershell.exe"
+    $ForwardParameters = @{} + $PSBoundParameters
+    foreach ($Key in $PSBoundParameters.Keys) {
+        if ($ForwardParameters[$Key] -is [switch]) { $ForwardParameters[$Key] = $ForwardParameters[$Key].IsPresent }
+    }
+    & $PowerShellPath -NoProfile -STA -ExecutionPolicy Bypass -OutputFormat Text -Command {
+        param($ScriptPath, $Parameters)
+        & $ScriptPath @Parameters
+        if ($?) { exit 0 }
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        exit 1
+    } -Args $PSCommandPath, $ForwardParameters
+    exit $LASTEXITCODE
 }
 
 $Script:Ui = @{}

@@ -155,8 +155,28 @@ param(
     [System.IO.DirectoryInfo]$MountDirectory = 'C:\WinRE-Customization\WinREMount\',
     [System.IO.DirectoryInfo]$LogDirectory = 'C:\WinRE-Customization\Logs\'
 )
-#Requires -Version 5.1 #
+#Requires -Version 5.1
 #Requires -RunAsAdministrator
+
+if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
+    $PowerShellPath = "$env:WINDIR\SysNative\WindowsPowerShell\v1.0\powershell.exe"
+    # -File flattens arrays. Pass a splat as data, using values the 5.1 binder can rehydrate.
+    $ForwardParameters = @{} + $PSBoundParameters
+    foreach ($Key in $PSBoundParameters.Keys) {
+        $Value = $PSBoundParameters[$Key]
+        if ($Value -is [switch]) { $ForwardParameters[$Key] = $Value.IsPresent }
+        elseif ($Value -is [System.IO.FileSystemInfo]) { $ForwardParameters[$Key] = $Value.ToString() }
+    }
+    & $PowerShellPath -NoProfile -OutputFormat Text -Command {
+        param($ScriptPath, $Parameters, $WhatIfPreference, $ConfirmPreference)
+        & $ScriptPath @Parameters
+        if ($?) { exit 0 }
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        exit 1
+    } -Args $PSCommandPath, $ForwardParameters, $WhatIfPreference, $ConfirmPreference
+    exit $LASTEXITCODE
+}
+
 # Functions
 function Get-ScriptPath {
     if ($psISE) {
@@ -244,6 +264,7 @@ function Confirm-PatchStep {
         No to a -Confirm prompt. The ShouldProcess of the script itself is used, because functions with [Parameter()]
         attributes get their own $PSCmdlet without SupportsShouldProcess.
     #>
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$Target,
         [string]$Action

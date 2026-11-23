@@ -59,6 +59,59 @@ BeforeAll {
     }
 }
 
+Describe 'WinRE host relaunch' -Skip:(-not [Environment]::Is64BitOperatingSystem) {
+    BeforeAll {
+        $X86PowerShell = "$env:WINDIR\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
+
+        function New-StartupProbe($Name, $EndMarker, $Body) {
+            # Run only the real parameter block and startup code, never servicing or WPF.
+            $Source = Get-Content -LiteralPath (Join-Path (Split-Path $Script:PatchScriptPath) $Name) -Raw
+            $Startup = $Source.Substring(0, $Source.IndexOf($EndMarker))
+            $Probe = Join-Path $TestDrive "probe's $Name"
+            Set-Content -LiteralPath $Probe -Value (($Startup -replace '(?m)^#Requires -RunAsAdministrator', '') + $Body) -Encoding UTF8
+            return $Probe
+        }
+    }
+
+    It 'runs the patch script natively with the original arguments, preview preference and exit code' {
+        $Probe = New-StartupProbe 'Patch-WinRE.ps1' 'function Get-ScriptPath' @'
+[Environment]::Is64BitProcess
+$PatchFilesDUorSOS.Count
+$PatchFilesDUorSOS
+$AbortIfFailed.IsPresent
+$PSBoundParameters.ContainsKey('ToConsole')
+$ToConsole.IsPresent
+$DeleteBackups -is [bool] -and -not $DeleteBackups
+$LogDirectory.ToString()
+$WhatIfPreference
+exit 37
+'@
+        $Output = & $X86PowerShell -NoProfile -ExecutionPolicy Bypass -OutputFormat Text -Command {
+            param($Path)
+            $WhatIfPreference = $true
+            & $Path -PatchFilesDUorSOS @('one cab', 'two''s $file') -AbortIfFailed -ToConsole:$false -DeleteBackups $false -LogDirectory 'test logs\'
+            exit $LASTEXITCODE
+        } -Args $Probe
+        $LASTEXITCODE | Should -Be 37
+        $Output | Should -Be @('True', '2', 'one cab', 'two''s $file', 'True', 'True', 'False', 'True', 'test logs\', 'True')
+    }
+
+    It 'runs the GUI in native STA even from an x86 STA host and preserves its arguments and exit code' {
+        $Probe = New-StartupProbe 'Start-PatchWinREGUI.ps1' '$Script:Ui = @{}' @'
+[Environment]::Is64BitProcess
+[Threading.Thread]::CurrentThread.ApartmentState
+$GenerateOnly.IsPresent
+$LogPath
+$LogFile
+$PSBoundParameters.ContainsKey('Verbose')
+exit 23
+'@
+        $Output = & $X86PowerShell -NoProfile -STA -ExecutionPolicy Bypass -File $Probe -GenerateOnly -LogPath 'custom logs' -LogFile 'it''s $literal.log' -Verbose
+        $LASTEXITCODE | Should -Be 23
+        $Output | Should -Be @('True', 'STA', 'True', 'custom logs', 'it''s $literal.log', 'True')
+    }
+}
+
 Describe 'Patch-WinRE.ps1 -WhatIf' {
     Context 'Patching with backups to delete' {
         BeforeAll {
